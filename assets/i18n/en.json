@@ -1,0 +1,131 @@
+{
+    "menu": {
+        "courses": "🎓 Courses",
+        "progress": "📊 Progress",
+        "quiz": "📝 Test/Quiz",
+        "certificates": "🎖️ Certificates",
+        "payment": "💳 Payment",
+        "profile": "👤 Profile",
+        "language": "🌐 Change language",
+        "help": "ℹ️ Help",
+        "user_panel": "📋 Switch to user panel"
+    },
+    "admin": {
+        "panel": "🛠 Admin panel",
+        "user_stats": "📊 User statistics",
+        "payment_history": "💸 Payment history",
+        "broadcast": "📢 Send broadcast",
+        "user_panel": "📋 User panel",
+        "manage_courses": "📚 Manage courses",
+        "manage_lessons": "📖 Manage lessons",
+        "manage_quizzes": "📝 Manage quizzes",
+        "create_course": "➕ Create course",
+        "view_courses": "🔍 View courses",
+        "delete_course": "🗑 Delete course",
+        "create_lesson": "➕ Create lesson",
+        "view_lessons": "🔍 View lessons",
+        "delete_lesson": "🗑 Delete lesson",
+        "create_quiz": "➕ Create quiz",
+        "view_quizzes": "🔍 View quizzes",
+        "delete_quiz": "🗑 Delete quiz",
+        "back": "🔙 Back",
+        "broadcast_message_request": "Enter the broadcast message text:",
+        "notification_id_request": "Enter the user's Telegram ID:",
+        "notification_message_request": "Enter the notification message:",
+        "password_request": "Please enter the admin password:",
+        "logout": "🚪 Logout",
+        "create_course_prompt": "Please send the new course details in the following format:\n\nKurs nomi uz: <course name in Uzbek>\nKurs nomi ru: <course name in Russian>\nKurs nomi en: <course name in English>\nTa’rif uz: <course description in Uzbek>\nTa’rif ru: <course description in Russian>\nTa’rif en: <course description in English>\nNarx: <course price in UZS; if free, enter 0>\n\nExample:\nKurs nomi uz: Matematika asoslari\nKurs nomi ru: Основы математики\nKurs nomi en: Basics of Mathematics\nTa’rif uz: Bu kurs maktab matematika asoslarini o‘rgatadi.\nTa’rif ru: Этот курс обучает основам школьной математики.\nTa’rif en: This course teaches the basics of school-level math.\nNarx: 50000"
+    },
+    "success": {
+        "registered": "✅ Registration successfully completed!",
+        "language_updated": "✅ Language updated successfully!",
+        "course_created": "✅ Course successfully created: *{title}*",
+        "lesson_created": "✅ Lesson successfully created: *{title}*",
+        "quiz_created": "✅ Quiz successfully created: *{question}*",
+        "course_deleted": "✅ Course successfully deleted: *{title}*",
+        "lesson_deleted": "✅ Lesson successfully deleted: *{title}*",
+        "quiz_deleted": "✅ Quiz successfully deleted: *{question}*",
+        "broadcast_sent": "✅ Broadcast message successfully sent!",
+        "correct_answer": "Correct answer!",
+        "notification_sent": "✅ Notification successfully sent!",
+        "lesson_completed": "🎉 Lesson *{title}* successfully completed!",
+        "course_started": "🎉 You started the *{title}* course! You can proceed to the first lesson.",
+        "admin_login": "✅ Successfully logged in as admin!",
+        "logout": "🚪 You have logged out of the admin panel."
+    },
+    "errors": {
+        "errors": {
+            "no_payment_history": "You have no payment history."
+        },
+
+        "access_denied": "🚫 You don't have permission to perform this action!",
+        "user_not_found": "🚫 User not found!",
+        "invalid_email": "🚫 Invalid email format! Please enter a valid email.",
+        "course_not_found": "🚫 Course not found!",
+        "lesson_not_found": "🚫 Lesson not found!",
+        "quiz_not_found": "🚫 Quiz not found!",
+        "course_not_completed": "🚫 Course not fully completed!",
+        "invalid_input": "🚫 Invalid input! Please try again.",
+        "incorrect_answer": "❌ Incorrect answer. Correct answer: *{correctAnswer}*",
+        "course_access_denied": "🚫 You don't have access to this course. Please purchase it.",
+        "already_logged_in": "🚫 You are already logged in as an admin!",
+        "invalid_password": "❌ Incorrect password. Try again.",
+        "not_logged_in": "🚫 You are not logged in as an admin!",
+        "certificate_generation_failed": "🚫 Certificate generation failed: {reason}"
+    },
+    "register": {
+        "phone_request": "📱 Please send your phone number to register:",
+        "share_phone": "📱 Share phone number",
+        "email_request": "📧 Please enter your email address:"
+    },
+    "profile": {
+        "info": "👤 *Profile information:*\n*Name:* {fullName}\n*Phone:* {phoneNumber}\n*Email:* {email}\n*Language:* {language}",
+        "not_set": "Not set"
+    },
+    "help": {
+        "message": "📚 *Help with using the bot:*\n\n- /start - Start the bot\n- /profile - View profile information\n- /language - Change language\n- /admin - Admin panel (for admins)\n\nℹ️ Contact the admin for additional questions!"
+    },
+    "stats": {
+        "header": "📊 *User statistics*",
+        "total_users": "👥 *Total users:* {totalUsers}",
+        "users_list": "📋 *Users list:*",
+        "user_info": "- *ID:* {id}\n  *Name:* {name}\n  *Phone:* {phone}\n  *Email:* {email}"
+    },
+    "courses": {
+        "no_courses": "🎓 No courses available at the moment.",
+        "list": "🎓 *Available courses:*",
+        "info": "📚 *Course:* {title}\n📝 *Description:* {description}\n💰 *Price:* {price}\n{access}",
+        "start": "🚀 Start course",
+        "access_granted": "✅ You have access to this course",
+        "access_denied": "🔒 Purchase the course"
+    },
+    "lessons": {
+        "no_lessons": "📖 No lessons available at the moment.",
+        "list": "📖 *Available lessons:*",
+        "info": "📚 *Lesson:* {title}\n📝 *Type:* {contentType}\n🔗 *Link:* {contentUrl}",
+        "complete": "✅ Complete lesson"
+    },
+    "quizzes": {
+        "no_quizzes": "📝 No quizzes available at the moment.",
+        "list": "📝 *Available quizzes:*",
+        "results_list": "📊 Select a course to view test results",
+        "results": "📊 Results:",
+        "no_results": "📝 You have no test results for this course.",
+        "result_item": "{index}. Question: {question}\nAnswer: {status}"
+    },
+    "certificates": {
+        "no_certificates": "🎖️ You don't have any certificates yet.",
+        "list": "🎖️ Your certificates",
+        "certificate_caption": "🎉 Certificate for *{title}*"
+    },
+    "payment": {
+        "no_payments": "💸 You don't have any payments yet.",
+        "history": "💸 Payment history",
+        "history_item": "{index}. Course: {course}\nAmount: {amount} UZS\nStatus: {status}\nDate: {date}",
+        "free_course": "💳 This course is free!",
+        "initiate": "💳 Payment for *{course}* course:\nAmount: {amount} UZS\nPayment link: {paymentUrl}",
+        "verify": "✅ Verify payment",
+        "verified": "✅ Payment successfully verified! Access to *{course}* course unlocked.",
+        "buy": "💳 Buy"
+    }
+}
