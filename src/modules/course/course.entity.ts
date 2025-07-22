@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany } from 'typeorm';
+import { Quiz } from '../quiz/quiz.entity';
 
 @Entity()
 export class Course {
@@ -19,4 +20,7 @@ export class Course {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @OneToMany(() => Quiz, (quiz) => quiz.course)
+  quizzes: Quiz[];
 }

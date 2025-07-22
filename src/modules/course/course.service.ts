@@ -4,6 +4,16 @@ import { Repository } from 'typeorm';
 import { Course } from './course.entity';
 import { UserService } from '../user/user.service';
 
+interface CourseInput {
+  title_uz: string;
+  title_ru: string;
+  title_en: string;
+  desc_uz: string;
+  desc_ru: string;
+  desc_en: string;
+  price: number;
+}
+
 @Injectable()
 export class CourseService {
   constructor(
@@ -28,6 +38,20 @@ export class CourseService {
   }): Promise<Course> {
     const course = this.courseRepository.create(data);
     return this.courseRepository.save(course);
+  }
+
+  async createCourses(coursesData: CourseInput[]): Promise<Course[]> {
+    const courses: Course[] = [];
+    for (const data of coursesData) {
+      const course = this.courseRepository.create({
+        title: { uz: data.title_uz, ru: data.title_ru, en: data.title_en },
+        description: { uz: data.desc_uz, ru: data.desc_ru, en: data.desc_en },
+        isPaid: data.price > 0,
+        price: data.price > 0 ? data.price : undefined,
+      });
+      courses.push(await this.courseRepository.save(course));
+    }
+    return courses;
   }
 
   async deleteCourse(id: number): Promise<void> {

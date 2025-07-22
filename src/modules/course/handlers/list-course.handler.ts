@@ -18,26 +18,33 @@ export class ListCoursesHandler {
     const user = await this.userService.findByTelegramId(telegramId);
     const language = user?.language && ['uz', 'ru', 'en'].includes(user.language) ? user.language : 'uz';
 
+    console.log(`ListCoursesHandler: Handling message for telegramId=${telegramId}, chatId=${chatId}`);
+
     if (!user) {
       await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.user_not_found', language));
       return;
     }
 
-    const courses = await this.courseService.findAll();
-    if (!courses.length) {
-      await bot.sendMessage(chatId, this.i18nService.getTranslation('courses.no_courses', language));
-      return;
+    try {
+      const courses = await this.courseService.findAll();
+      if (!courses.length) {
+        await bot.sendMessage(chatId, this.i18nService.getTranslation('courses.no_courses', language));
+        return;
+      }
+
+      const keyboard = {
+        reply_markup: {
+          inline_keyboard: courses.map((course) => [
+            { text: course.title[language], callback_data: `course_info_${course.id}` },
+          ]),
+        },
+      };
+
+      await bot.sendMessage(chatId, this.i18nService.getTranslation('courses.list', language), keyboard);
+    } catch (error) {
+      console.error(`ListCoursesHandler error: ${error.message}, stack: ${error.stack}`);
+      await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.invalid_input', language));
     }
-
-    const keyboard = {
-      reply_markup: {
-        inline_keyboard: courses.map((course) => [
-          { text: course.title[language], callback_data: `course_info_${course.id}` },
-        ]),
-      },
-    };
-
-    await bot.sendMessage(chatId, this.i18nService.getTranslation('courses.list', language), keyboard);
   }
 
   async handleCallback(query: TelegramBot.CallbackQuery, bot: TelegramBot) {
@@ -47,29 +54,91 @@ export class ListCoursesHandler {
     const language = user?.language && ['uz', 'ru', 'en'].includes(user.language) ? user.language : 'uz';
     const data = query.data;
 
-    if (data.startsWith('course_info_')) {
-      const courseId = parseInt(data.split('_')[2], 10);
-      if (isNaN(courseId)) {
-        await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.invalid_input', language));
-        await bot.answerCallbackQuery(query.id);
-        return;
-      }
-      const course = await this.courseService.findById(courseId);
-      if (!course) {
-        await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.course_not_found', language));
-        await bot.answerCallbackQuery(query.id);
-        return;
-      }
-      const canAccess = await this.courseService.canAccessCourse(telegramId, courseId);
-      const message = this.i18nService.getTranslation('courses.info', language, {
-        title: course.title[language],
-        description: course.description[language],
-        price: course.isPaid ? `${course.price} UZS` : this.i18nService.getTranslation('courses.free', language),
-        access: canAccess ? this.i18nService.getTranslation('courses.access_granted', language) : this.i18nService.getTranslation('courses.access_denied', language),
-      });
+    console.log(`ListCoursesHandler: Handling callback data=${data}, telegramId=${telegramId}, chatId=${chatId}`);
 
-      await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+    if (!user) {
+      await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.user_not_found', language));
+      try {
+        await bot.answerCallbackQuery(query.id);
+      } catch (error) {
+        console.error(`ListCoursesHandler: answerCallbackQuery error: ${error.message}`);
+      }
+      return;
     }
-    await bot.answerCallbackQuery(query.id);
+
+    try {
+      if (data === 'list_courses') {
+        const courses = await this.courseService.findAll();
+        if (!courses.length) {
+          await bot.sendMessage(chatId, this.i18nService.getTranslation('courses.no_courses', language));
+          try {
+            await bot.answerCallbackQuery(query.id);
+          } catch (error) {
+            console.error(`ListCoursesHandler: answerCallbackQuery error: ${error.message}`);
+          }
+          return;
+        }
+
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: courses.map((course) => [
+              { text: course.title[language], callback_data: `course_info_${course.id}` },
+            ]),
+          },
+        };
+
+        await bot.sendMessage(chatId, this.i18nService.getTranslation('courses.list', language), keyboard);
+      } else if (data.startsWith('course_info_')) {
+        const courseId = parseInt(data.split('_')[2], 10);
+        if (isNaN(courseId)) {
+          await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.invalid_input', language));
+          try {
+            await bot.answerCallbackQuery(query.id);
+          } catch (error) {
+            console.error(`ListCoursesHandler: answerCallbackQuery error: ${error.message}`);
+          }
+          return;
+        }
+        const course = await this.courseService.findById(courseId);
+        if (!course) {
+          await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.course_not_found', language));
+          try {
+            await bot.answerCallbackQuery(query.id);
+          } catch (error) {
+            console.error(`ListCoursesHandler: answerCallbackQuery error: ${error.message}`);
+          }
+          return;
+        }
+        const canAccess = await this.courseService.canAccessCourse(telegramId, courseId);
+        const message = this.i18nService.getTranslation('courses.info', language, {
+          title: course.title[language],
+          description: course.description[language],
+          price: course.isPaid ? `${course.price} UZS` : this.i18nService.getTranslation('courses.free', language),
+          access: canAccess ? this.i18nService.getTranslation('courses.access_granted', language) : this.i18nService.getTranslation('courses.access_denied', language),
+        });
+
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: [
+              canAccess ? [{ text: this.i18nService.getTranslation('quizzes.start', language), callback_data: `start_quiz_course_${courseId}` }] : [],
+              [{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'list_courses' }],
+            ].filter(row => row.length > 0),
+          },
+        };
+
+        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...keyboard });
+      } else {
+        await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.invalid_input', language));
+      }
+    } catch (error) {
+      console.error(`ListCoursesHandler error: ${error.message}, stack: ${error.stack}`);
+      await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.invalid_input', language));
+    }
+
+    try {
+      await bot.answerCallbackQuery(query.id);
+    } catch (error) {
+      console.error(`ListCoursesHandler: answerCallbackQuery error: ${error.message}`);
+    }
   }
 }

@@ -9,6 +9,35 @@ import { I18nService } from '../../i18n/i18n.service';
 import { NotificationService } from '../../notification/notification.service';
 import * as TelegramBot from 'node-telegram-bot-api';
 
+interface CourseInput {
+  title_uz: string;
+  title_ru: string;
+  title_en: string;
+  desc_uz: string;
+  desc_ru: string;
+  desc_en: string;
+  price: number;
+}
+
+interface LessonInput {
+  title_uz: string;
+  title_ru: string;
+  title_en: string;
+  contentType: string;
+  contentUrl: string;
+  order: number;
+}
+
+interface QuizInput {
+  question_uz: string;
+  question_ru: string;
+  question_en: string;
+  options_uz: string;
+  options_ru: string;
+  options_en: string;
+  correctAnswer: number;
+}
+
 @Injectable()
 export class AdminHandler {
   constructor(
@@ -67,7 +96,7 @@ export class AdminHandler {
       }
     } else if (msg.text === this.i18nService.getTranslation('admin.payment_history', language)) {
       const message = this.i18nService.getTranslation('admin.payment_history', language) + '\n' +
-      await this.i18nService.getTranslation('errors.no_payment_history', language);
+                     this.i18nService.getTranslation('errors.no_payment_history', language);
       await this.telegramService.sendMessageWithAdminMenu(chatId, message, language);
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.broadcast', language)) {
@@ -118,14 +147,9 @@ export class AdminHandler {
       bot.once('message', async (reply) => {
         if (reply.chat.id === chatId) {
           try {
-            const data = this.parseCourseInput(reply.text, language);
-            const course = await this.courseService.createCourse({
-              title: { uz: data.title_uz, ru: data.title_ru, en: data.title_en },
-              description: { uz: data.desc_uz, ru: data.desc_ru, en: data.desc_en },
-              isPaid: data.price > 0,
-              price: data.price > 0 ? data.price : undefined,
-            });
-            const message = this.i18nService.getTranslation('success.course_created', language, { title: course.title[language] });
+            const coursesData = this.parseMultipleCourseInput(reply.text, language);
+            const createdCourses = await this.courseService.createCourses(coursesData);
+            const message = this.i18nService.getTranslation('success.course_created', language, { title: createdCourses.map(c => c.title[language]).join(', ') });
             await this.sendManageCoursesMenu(chatId, message, language);
           } catch (error) {
             const message = this.i18nService.getTranslation('errors.invalid_input', language);
@@ -334,15 +358,9 @@ export class AdminHandler {
       bot.once('message', async (reply) => {
         if (reply.chat.id === chatId) {
           try {
-            const data = this.parseLessonInput(reply.text, language);
-            const lesson = await this.lessonService.createLesson({
-              courseId,
-              title: { uz: data.title_uz, ru: data.title_ru, en: data.title_en },
-              contentType: data.contentType,
-              contentUrl: data.contentUrl,
-              order: data.order,
-            });
-            const message = this.i18nService.getTranslation('success.lesson_created', language, { title: this.escapeMarkdown(lesson.title[language]) });
+            const lessonsData = this.parseMultipleLessonInput(reply.text, language);
+            const createdLessons = await this.lessonService.createLessons(courseId, lessonsData);
+            const message = this.i18nService.getTranslation('success.lesson_created', language, { title: createdLessons.map(l => l.title[language]).join(', ') });
             await this.sendManageLessonsMenu(chatId, message, language);
           } catch (error) {
             const message = this.i18nService.getTranslation('errors.invalid_input', language);
@@ -411,18 +429,9 @@ export class AdminHandler {
       bot.once('message', async (reply) => {
         if (reply.chat.id === chatId) {
           try {
-            const data = this.parseQuizInput(reply.text, language);
-            const quiz = await this.quizService.createQuiz({
-              courseId,
-              question: { uz: data.question_uz, ru: data.question_ru, en: data.question_en },
-              options: {
-                uz: data.options_uz.split(',').map(s => s.trim()),
-                ru: data.options_ru.split(',').map(s => s.trim()),
-                en: data.options_en.split(',').map(s => s.trim()),
-              },
-              correctAnswer: data.correctAnswer,
-            });
-            const message = this.i18nService.getTranslation('success.quiz_created', language, { question: this.escapeMarkdown(quiz.question[language]) });
+            const quizzesData = this.parseMultipleQuizInput(reply.text, language);
+            const createdQuizzes = await this.quizService.createQuizzes(courseId, quizzesData);
+            const message = this.i18nService.getTranslation('success.quiz_created', language, { question: createdQuizzes.map(q => q.question[language]).join(', ') });
             await this.sendManageQuizzesMenu(chatId, message, language);
           } catch (error) {
             const message = this.i18nService.getTranslation('errors.invalid_input', language);
@@ -440,40 +449,32 @@ export class AdminHandler {
       }
       const quizzes = await this.quizService.findByCourseId(courseId);
       if (!quizzes.length) {
-  const message = this.i18nService.getTranslation('quizzes.no_quizzes', language);
-  await this.sendManageQuizzesMenu(chatId, message, language);
-  return;
-}
-
-const messages: string[] = [];
-let currentMessage: string = this.i18nService.getTranslation('quizzes.list', language) + '\n\n';
-
-for (const [index, quiz] of quizzes.entries()) {
-  const questionText = this.escapeMarkdown(quiz.question[language]);
-  const options = quiz.options as Record<string, string[]>;
-  const formattedOptions = options[language].map(opt => this.escapeMarkdown(opt)).join(', ');
-  const correctAnswer = this.escapeMarkdown(options[language][quiz.correctAnswer]);
-
-  const quizText = `${index + 1}. *${questionText}*\n` +
-                   `📝 *Variantlar:* ${formattedOptions}\n` +
-                   `✅ *To‘g‘ri javob:* ${correctAnswer}`;
-
-  if ((currentMessage + quizText + '\n\n').length > 4000) {
-    messages.push(currentMessage);
-    currentMessage = '';
-  }
-
-  currentMessage += quizText + '\n\n';
-}
-
-if (currentMessage) {
-  messages.push(currentMessage);
-}
-
-for (const message of messages) {
-  await this.sendManageQuizzesMenu(chatId, message, language);
-}
-
+        const message = this.i18nService.getTranslation('quizzes.no_quizzes', language);
+        await this.sendManageQuizzesMenu(chatId, message, language);
+        return;
+      }
+      const messages: string[] = [];
+      let currentMessage: string = this.i18nService.getTranslation('quizzes.list', language) + '\n\n';
+      for (const [index, quiz] of quizzes.entries()) {
+        const questionText = this.escapeMarkdown(quiz.question[language]);
+        const options = quiz.options as Record<string, string[]>;
+        const formattedOptions = options[language].map(opt => this.escapeMarkdown(opt)).join(', ');
+        const correctAnswer = this.escapeMarkdown(options[language][quiz.correctAnswer]);
+        const quizText = `${index + 1}. *${questionText}*\n` +
+                         `📝 *Variantlar:* ${formattedOptions}\n` +
+                         `✅ *To‘g‘ri javob:* ${correctAnswer}`;
+        if ((currentMessage + quizText + '\n\n').length > 4000) {
+          messages.push(currentMessage);
+          currentMessage = '';
+        }
+        currentMessage += quizText + '\n\n';
+      }
+      if (currentMessage) {
+        messages.push(currentMessage);
+      }
+      for (const message of messages) {
+        await this.sendManageQuizzesMenu(chatId, message, language);
+      }
     } else if (data.startsWith('delete_quiz_course_')) {
       const courseId = parseInt(data.split('_')[3], 10);
       const quizzes = await this.quizService.findByCourseId(courseId);
@@ -570,83 +571,121 @@ for (const message of messages) {
     });
   }
 
-  private parseCourseInput(input: string, language: string): any {
-    const lines = input.split('\n').map(line => line.trim());
-    const expectedFormat = [
-      'Kurs nomi uz', 'Kurs nomi ru', 'Kurs nomi en',
-      'Ta’rif uz', 'Ta’rif ru', 'Ta’rif en', 'Narx',
-    ];
-    if (lines.length < expectedFormat.length) {
-      throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+  private parseMultipleCourseInput(input: string, language: string): CourseInput[] {
+    const courses = input.split('\n---\n').map(item => item.trim());
+    const result: CourseInput[] = [];
+    for (const course of courses) {
+      const lines = course.split('\n').map(line => line.trim());
+      const expectedFormat = [
+        'Kurs nomi uz', 'Kurs nomi ru', 'Kurs nomi en',
+        'Ta’rif uz', 'Ta’rif ru', 'Ta’rif en', 'Narx',
+      ];
+      if (lines.length < expectedFormat.length) {
+        throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+      }
+      const data: CourseInput = {
+        title_uz: '',
+        title_ru: '',
+        title_en: '',
+        desc_uz: '',
+        desc_ru: '',
+        desc_en: '',
+        price: 0,
+      };
+      lines.forEach(line => {
+        if (line.startsWith('Kurs nomi uz:')) data.title_uz = line.replace('Kurs nomi uz:', '').trim();
+        if (line.startsWith('Kurs nomi ru:')) data.title_ru = line.replace('Kurs nomi ru:', '').trim();
+        if (line.startsWith('Kurs nomi en:')) data.title_en = line.replace('Kurs nomi en:', '').trim();
+        if (line.startsWith('Ta’rif uz:')) data.desc_uz = line.replace('Ta’rif uz:', '').trim();
+        if (line.startsWith('Ta’rif ru:')) data.desc_ru = line.replace('Ta’rif ru:', '').trim();
+        if (line.startsWith('Ta’rif en:')) data.desc_en = line.replace('Ta’rif en:', '').trim();
+        if (line.startsWith('Narx:')) data.price = parseInt(line.replace('Narx:', '').trim(), 10);
+      });
+      if (!data.title_uz || !data.title_ru || !data.title_en || !data.desc_uz || !data.desc_ru || !data.desc_en || isNaN(data.price)) {
+        throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+      }
+      result.push(data);
     }
-    const data: any = {};
-    lines.forEach(line => {
-      if (line.startsWith('Kurs nomi uz:')) data.title_uz = line.replace('Kurs nomi uz:', '').trim();
-      if (line.startsWith('Kurs nomi ru:')) data.title_ru = line.replace('Kurs nomi ru:', '').trim();
-      if (line.startsWith('Kurs nomi en:')) data.title_en = line.replace('Kurs nomi en:', '').trim();
-      if (line.startsWith('Ta’rif uz:')) data.desc_uz = line.replace('Ta’rif uz:', '').trim();
-      if (line.startsWith('Ta’rif ru:')) data.desc_ru = line.replace('Ta’rif ru:', '').trim();
-      if (line.startsWith('Ta’rif en:')) data.desc_en = line.replace('Ta’rif en:', '').trim();
-      if (line.startsWith('Narx:')) data.price = parseInt(line.replace('Narx:', '').trim(), 10);
-    });
-    if (!data.title_uz || !data.title_ru || !data.title_en || !data.desc_uz || !data.desc_ru || !data.desc_en || isNaN(data.price)) {
-      throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
-    }
-    return data;
+    return result;
   }
 
-  private parseLessonInput(input: string, language: string): any {
-    const lines = input.split('\n').map(line => line.trim());
-    const expectedFormat = [
-      'Dars nomi uz', 'Dars nomi ru', 'Dars nomi en',
-      'Kontent turi', 'Kontent havolasi', 'Tartib',
-    ];
-    if (lines.length < expectedFormat.length) {
-      throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+  private parseMultipleLessonInput(input: string, language: string): LessonInput[] {
+    const lessons = input.split('\n---\n').map(item => item.trim());
+    const result: LessonInput[] = [];
+    for (const lesson of lessons) {
+      const lines = lesson.split('\n').map(line => line.trim());
+      const expectedFormat = [
+        'Dars nomi uz', 'Dars nomi ru', 'Dars nomi en',
+        'Kontent turi', 'Kontent havolasi', 'Tartib',
+      ];
+      if (lines.length < expectedFormat.length) {
+        throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+      }
+      const data: LessonInput = {
+        title_uz: '',
+        title_ru: '',
+        title_en: '',
+        contentType: '',
+        contentUrl: '',
+        order: 0,
+      };
+      lines.forEach(line => {
+        if (line.startsWith('Dars nomi uz:')) data.title_uz = line.replace('Dars nomi uz:', '').trim();
+        if (line.startsWith('Dars nomi ru:')) data.title_ru = line.replace('Dars nomi ru:', '').trim();
+        if (line.startsWith('Dars nomi en:')) data.title_en = line.replace('Dars nomi en:', '').trim();
+        if (line.startsWith('Kontent turi:')) data.contentType = line.replace('Kontent turi:', '').trim();
+        if (line.startsWith('Kontent havolasi:')) data.contentUrl = line.replace('Kontent havolasi:', '').trim();
+        if (line.startsWith('Tartib:')) data.order = parseInt(line.replace('Tartib:', '').trim(), 10);
+      });
+      if (!data.title_uz || !data.title_ru || !data.title_en || !data.contentType || !data.contentUrl || isNaN(data.order)) {
+        throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+      }
+      result.push(data);
     }
-    const data: any = {};
-    lines.forEach(line => {
-      if (line.startsWith('Dars nomi uz:')) data.title_uz = line.replace('Dars nomi uz:', '').trim();
-      if (line.startsWith('Dars nomi ru:')) data.title_ru = line.replace('Dars nomi ru:', '').trim();
-      if (line.startsWith('Dars nomi en:')) data.title_en = line.replace('Dars nomi en:', '').trim();
-      if (line.startsWith('Kontent turi:')) data.contentType = line.replace('Kontent turi:', '').trim();
-      if (line.startsWith('Kontent havolasi:')) data.contentUrl = line.replace('Kontent havolasi:', '').trim();
-      if (line.startsWith('Tartib:')) data.order = parseInt(line.replace('Tartib:', '').trim(), 10);
-    });
-    if (!data.title_uz || !data.title_ru || !data.title_en || !data.contentType || !data.contentUrl || isNaN(data.order)) {
-      throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
-    }
-    return data;
+    return result;
   }
 
-  private parseQuizInput(input: string, language: string): any {
-    const lines = input.split('\n').map(line => line.trim());
-    const expectedFormat = [
-      'Savol uz', 'Savol ru', 'Savol en',
-      'Variantlar uz', 'Variantlar ru', 'Variantlar en',
-      'To‘g‘ri javob',
-    ];
-    if (lines.length < expectedFormat.length) {
-      throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+  private parseMultipleQuizInput(input: string, language: string): QuizInput[] {
+    const quizzes = input.split('\n---\n').map(item => item.trim());
+    const result: QuizInput[] = [];
+    for (const quiz of quizzes) {
+      const lines = quiz.split('\n').map(line => line.trim());
+      const expectedFormat = [
+        'Savol uz', 'Savol ru', 'Savol en',
+        'Variantlar uz', 'Variantlar ru', 'Variantlar en',
+        'To‘g‘ri javob',
+      ];
+      if (lines.length < expectedFormat.length) {
+        throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+      }
+      const data: QuizInput = {
+        question_uz: '',
+        question_ru: '',
+        question_en: '',
+        options_uz: '',
+        options_ru: '',
+        options_en: '',
+        correctAnswer: 0,
+      };
+      lines.forEach(line => {
+        if (line.startsWith('Savol uz:')) data.question_uz = line.replace('Savol uz:', '').trim();
+        if (line.startsWith('Savol ru:')) data.question_ru = line.replace('Savol ru:', '').trim();
+        if (line.startsWith('Savol en:')) data.question_en = line.replace('Savol en:', '').trim();
+        if (line.startsWith('Variantlar uz:')) data.options_uz = line.replace('Variantlar uz:', '').trim();
+        if (line.startsWith('Variantlar ru:')) data.options_ru = line.replace('Variantlar ru:', '').trim();
+        if (line.startsWith('Variantlar en:')) data.options_en = line.replace('Variantlar en:', '').trim();
+        if (line.startsWith('To‘g‘ri javob:')) data.correctAnswer = parseInt(line.replace('To‘g‘ri javob:', '').trim(), 10);
+      });
+      if (
+        !data.question_uz || !data.question_ru || !data.question_en ||
+        !data.options_uz || !data.options_ru || !data.options_en ||
+        isNaN(data.correctAnswer) || data.correctAnswer < 0 || data.correctAnswer > 3
+      ) {
+        throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+      }
+      result.push(data);
     }
-    const data: any = {};
-    lines.forEach(line => {
-      if (line.startsWith('Savol uz:')) data.question_uz = line.replace('Savol uz:', '').trim();
-      if (line.startsWith('Savol ru:')) data.question_ru = line.replace('Savol ru:', '').trim();
-      if (line.startsWith('Savol en:')) data.question_en = line.replace('Savol en:', '').trim();
-      if (line.startsWith('Variantlar uz:')) data.options_uz = line.replace('Variantlar uz:', '').trim();
-      if (line.startsWith('Variantlar ru:')) data.options_ru = line.replace('Variantlar ru:', '').trim();
-      if (line.startsWith('Variantlar en:')) data.options_en = line.replace('Variantlar en:', '').trim();
-      if (line.startsWith('To‘g‘ri javob:')) data.correctAnswer = parseInt(line.replace('To‘g‘ri javob:', '').trim(), 10);
-    });
-    if (
-      !data.question_uz || !data.question_ru || !data.question_en ||
-      !data.options_uz || !data.options_ru || !data.options_en ||
-      isNaN(data.correctAnswer) || data.correctAnswer < 0 || data.correctAnswer > 3
-    ) {
-      throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
-    }
-    return data;
+    return result;
   }
 
   private escapeMarkdown(text: string): string {

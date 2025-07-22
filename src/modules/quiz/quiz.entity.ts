@@ -1,12 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
-import { Course } from '../course/course.entity';
 
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Course } from '../course/course.entity';
+import { QuizResult } from './quiz-result.entity';
 @Entity()
 export class Quiz {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Course)
+  @ManyToOne(() => Course, (course) => course.quizzes)
   course: Course;
 
   @Column('jsonb')
@@ -17,4 +18,10 @@ export class Quiz {
 
   @Column()
   correctAnswer: number;
+
+  @OneToMany(() => QuizResult, (quizResult) => quizResult.quiz, {
+    cascade: ['insert', 'update'], 
+    onDelete: 'CASCADE',
+  })
+  quizResults: QuizResult[];
 }

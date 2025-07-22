@@ -5,6 +5,15 @@ import { Lesson } from './lesson.entity';
 import { CourseService } from '../course/course.service';
 import { UserService } from '../user/user.service';
 
+interface LessonInput {
+  title_uz: string;
+  title_ru: string;
+  title_en: string;
+  contentType: string;
+  contentUrl: string;
+  order: number;
+}
+
 @Injectable()
 export class LessonService {
   constructor(
@@ -41,6 +50,25 @@ export class LessonService {
       order: data.order,
     });
     return this.lessonRepository.save(lesson);
+  }
+
+  async createLessons(courseId: number, lessonsData: LessonInput[]): Promise<Lesson[]> {
+    const course = await this.courseService.findById(courseId);
+    if (!course) {
+      throw new Error('Kurs topilmadi');
+    }
+    const lessons: Lesson[] = [];
+    for (const data of lessonsData) {
+      const lesson = this.lessonRepository.create({
+        course,
+        title: { uz: data.title_uz, ru: data.title_ru, en: data.title_en },
+        contentType: data.contentType,
+        contentUrl: data.contentUrl,
+        order: data.order,
+      });
+      lessons.push(await this.lessonRepository.save(lesson));
+    }
+    return lessons;
   }
 
   async updateLesson(id: number, data: {

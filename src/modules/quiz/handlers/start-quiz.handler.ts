@@ -25,6 +25,11 @@ export class StartQuizHandler {
     const user = await this.userService.findByTelegramId(telegramId);
     const language = user?.language && ['uz', 'ru', 'en'].includes(user.language) ? user.language : 'uz';
 
+    if (!user) {
+      await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.user_not_found', language), language, telegramId);
+      return;
+    }
+
     const courses = await this.courseService.findAll();
     if (!courses.length) {
       await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('courses.no_courses', language), language, telegramId);
@@ -53,89 +58,155 @@ export class StartQuizHandler {
 
     if (!user) {
       await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.user_not_found', language), language, telegramId);
-      await bot.answerCallbackQuery(query.id);
+      try {
+        await bot.answerCallbackQuery(query.id);
+      } catch (error) {
+        console.error(`StartQuizHandler: answerCallbackQuery error: ${error.message}`);
+      }
       return;
     }
 
     const data = query.data;
-    if (data.startsWith('start_quiz_course_')) {
-      const courseId = parseInt(data.split('_')[3], 10);
-      if (isNaN(courseId)) {
-        await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.invalid_input', language), language, telegramId);
-        await bot.answerCallbackQuery(query.id);
-        return;
-      }
+    console.log(`StartQuizHandler: Handling callback data=${data}`);
 
-      const canAccess = await this.quizService.canAccessQuiz(telegramId, courseId);
-      if (!canAccess) {
-        await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.course_access_denied', language), language, telegramId);
-        await bot.answerCallbackQuery(query.id);
-        return;
-      }
+    try {
+      if (data.startsWith('start_quiz_course_')) {
+        const courseId = parseInt(data.split('_')[3], 10);
+        console.log(`StartQuizHandler: Parsed courseId=${courseId}`);
 
-      const quizzes = await this.quizService.findByCourseId(courseId);
-      if (!quizzes.length) {
-        await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('quizzes.no_quizzes', language), language, telegramId);
-        await bot.answerCallbackQuery(query.id);
-        return;
-      }
+        if (isNaN(courseId)) {
+          await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.invalid_input', language), language, telegramId);
+          try {
+            await bot.answerCallbackQuery(query.id);
+          } catch (error) {
+            console.error(`StartQuizHandler: answerCallbackQuery error: ${error.message}`);
+          }
+          return;
+        }
 
-      const quiz = quizzes[0];
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: quiz.options[language].map((option, index) => [
-            { text: option, callback_data: `submit_quiz_${quiz.id}_${index}` },
-          ]),
-        },
-      };
-      await bot.sendMessage(
-        chatId,
-        `${quiz.question[language]}\n\n${quiz.options[language].map((option, index) => `${index + 1}. ${option}`).join('\n')}`,
-        keyboard,
-      );
-    } else if (data.startsWith('submit_quiz_')) {
-      const [_, quizId, selectedAnswer] = data.split('_').map((v, i) => (i > 0 ? parseInt(v, 10) : v));
-      if (isNaN(quizId) || isNaN(selectedAnswer)) {
-        await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.invalid_input', language), language, telegramId);
-        await bot.answerCallbackQuery(query.id);
-        return;
-      }
-
-      const quiz = await this.quizService.findById(quizId);
-      if (!quiz) {
-        await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.quiz_not_found', language), language, telegramId);
-        await bot.answerCallbackQuery(query.id);
-        return;
-      }
-
-      const result = await this.quizService.submitQuiz(telegramId, quizId, selectedAnswer);
-      const message = result.isCorrect
-        ? this.i18nService.getTranslation('success.correct_answer', language)
-        : this.i18nService.getTranslation('errors.incorrect_answer', language, { correctAnswer: quiz.options[language][result.correctAnswer] });
-
-      if (result.isCorrect) {
-        const quizResults = await this.quizService.getResults(telegramId, quiz.course.id);
-        const totalQuizzes = quizResults.length;
-        const correctAnswers = quizResults.filter((r) => r.isCorrect).length;
-        const percentage = totalQuizzes > 0 ? (correctAnswers / totalQuizzes) * 100 : 0;
-
-        if (percentage >= 60) {
-          const certificate = await this.certificateService.generateCertificate(telegramId, quiz.course.id, language);
-          await bot.sendDocument(
+        const canAccess = await this.quizService.canAccessQuiz(telegramId, courseId);
+        console.log(`StartQuizHandler: canAccess=${canAccess} for courseId=${courseId}, telegramId=${telegramId}`);
+        if (!canAccess) {
+          await this.telegramService.sendMessageWithMenu(
             chatId,
-            certificate.pdfUrl,
-            {
-              caption: this.i18nService.getTranslation('certificates.certificate_caption', language, { title: quiz.course.title[language] }),
-              reply_markup: {
-                inline_keyboard: [[{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'list_courses' }]],
-              },
-            },
+            this.i18nService.getTranslation('errors.course_access_denied', language),
+            language,
+            telegramId,
           );
+          try {
+            await bot.answerCallbackQuery(query.id);
+          } catch (error) {
+            console.error(`StartQuizHandler: answerCallbackQuery error: ${error.message}`);
+          }
+          return;
+        }
+
+        const quizzes = await this.quizService.findByCourseId(courseId);
+        if (!quizzes.length) {
+          await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('quizzes.no_quizzes', language), language, telegramId);
+          try {
+            await bot.answerCallbackQuery(query.id);
+          } catch (error) {
+            console.error(`StartQuizHandler: answerCallbackQuery error: ${error.message}`);
+          }
+          return;
+        }
+
+        const results = await this.quizService.getResults(telegramId, courseId);
+        const completedQuizIds = results.map((result) => result.quiz.id);
+        const availableQuiz = quizzes.find((quiz) => !completedQuizIds.includes(quiz.id));
+
+        if (!availableQuiz) {
+          const keyboard = {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: this.i18nService.getTranslation('quizzes.restart', language), callback_data: `restart_quiz_course_${courseId}` }],
+                [{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'list_courses' }],
+              ],
+            },
+          };
+          await bot.sendMessage(
+            chatId,
+            this.i18nService.getTranslation('quizzes.all_completed', language),
+            keyboard,
+          );
+          try {
+            await bot.answerCallbackQuery(query.id);
+          } catch (error) {
+            console.error(`StartQuizHandler: answerCallbackQuery error: ${error.message}`);
+          }
+          return;
+        }
+
+        await this.showQuiz(bot, chatId, availableQuiz, language);
+      } else if (data.startsWith('restart_quiz_course_')) {
+        const courseId = parseInt(data.split('_')[3], 10);
+        console.log(`StartQuizHandler: Parsed courseId=${courseId} for restart`);
+
+        if (isNaN(courseId)) {
+          await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.invalid_input', language), language, telegramId);
+          try {
+            await bot.answerCallbackQuery(query.id);
+          } catch (error) {
+            console.error(`StartQuizHandler: answerCallbackQuery error: ${error.message}`);
+          }
+          return;
+        }
+
+        try {
+          await this.quizService.resetQuizResults(telegramId, courseId);
+          const quizzes = await this.quizService.findByCourseId(courseId);
+          const firstQuiz = quizzes[0];
+          if (!firstQuiz) {
+            await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('quizzes.no_quizzes', language), language, telegramId);
+            try {
+              await bot.answerCallbackQuery(query.id);
+            } catch (error) {
+              console.error(`StartQuizHandler: answerCallbackQuery error: ${error.message}`);
+            }
+            return;
+          }
+
+          await this.showQuiz(bot, chatId, firstQuiz, language);
+        } catch (error) {
+          console.error(`StartQuizHandler: resetQuizResults error: ${error.message}, stack: ${error.stack}`);
+          const errorMessage = this.i18nService.getTranslation('errors.reset_quiz_failed', language, { error: error.message.replace(/[^\w\s]/gi, '') });
+          await this.telegramService.sendMessageWithMenu(chatId, errorMessage, language, telegramId);
+          try {
+            await bot.answerCallbackQuery(query.id);
+          } catch (error) {
+            console.error(`StartQuizHandler: answerCallbackQuery error: ${error.message}`);
+          }
+          return;
         }
       }
-
-      await this.telegramService.sendMessageWithMenu(chatId, message, language, telegramId);
+    } catch (error) {
+      console.error(`StartQuizHandler error: ${error.message}, stack: ${error.stack}`);
+      await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.invalid_input', language), language, telegramId);
     }
-    await bot.answerCallbackQuery(query.id);
+
+    try {
+      await bot.answerCallbackQuery(query.id);
+    } catch (error) {
+      console.error(`StartQuizHandler: answerCallbackQuery error: ${error.message}`);
+    }
+  }
+
+  private async showQuiz(bot: TelegramBot, chatId: number, quiz: any, language: string) {
+    const keyboard = {
+      reply_markup: {
+        inline_keyboard: [
+          ...quiz.options[language].map((option: string, index: number) => [
+            { text: option, callback_data: `submit_quiz_${quiz.id}_${index}` },
+          ]),
+          [{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'list_courses' }],
+        ],
+      },
+    };
+    await bot.sendMessage(
+      chatId,
+      `${quiz.question[language]}\n\n${quiz.options[language].map((option: string, index: number) => `${index + 1}. ${option}`).join('\n')}`,
+      { ...keyboard, parse_mode: 'Markdown' },
+    );
   }
 }

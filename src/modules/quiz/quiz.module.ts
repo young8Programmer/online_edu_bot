@@ -29,6 +29,6 @@ import { CertificateModule } from '../certificate/certificate.module';
     SubmitQuizHandler,
     ViewResultsHandler,
   ],
-  exports: [QuizService, StartQuizHandler],
+  exports: [QuizService, StartQuizHandler, SubmitQuizHandler],
 })
 export class QuizModule {}

@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany } from 'typeorm';
+import { QuizResult } from '../quiz/quiz-result.entity';
 
 @Entity()
 export class User {
@@ -25,4 +26,7 @@ export class User {
 
   @CreateDateColumn()
   registeredAt: Date;
+
+  @OneToMany(() => QuizResult, (quizResult) => quizResult.user)
+  quizResults: QuizResult[];
 }

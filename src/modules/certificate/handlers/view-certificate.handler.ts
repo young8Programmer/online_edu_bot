@@ -4,6 +4,7 @@ import { I18nService } from '../../i18n/i18n.service';
 import { UserService } from '../../user/user.service';
 import { CertificateService } from '../certificate.service';
 import * as TelegramBot from 'node-telegram-bot-api';
+import { format } from 'date-fns';
 
 @Injectable()
 export class ViewCertificatesHandler {
@@ -21,9 +22,15 @@ export class ViewCertificatesHandler {
     const user = await this.userService.findByTelegramId(telegramId);
     const language = user?.language && ['uz', 'ru', 'en'].includes(user.language) ? user.language : 'uz';
 
-    const certificates = await this.certificateService.getCertificates(telegramId, language);
+    const certificates = await this.certificateService.getCertificates(telegramId);
+
     if (!certificates.length) {
-      await this.telegramService.sendMessageWithMenu(chatId, this.i18nService.getTranslation('certificates.no_certificates', language), language, telegramId);
+      await this.telegramService.sendMessageWithMenu(
+        chatId,
+        this.i18nService.getTranslation('certificates.no_certificates', language),
+        language,
+        telegramId,
+      );
       return;
     }
 
@@ -31,8 +38,8 @@ export class ViewCertificatesHandler {
       .map((cert, index) =>
         this.i18nService.getTranslation('certificates.info', language, {
           index: (index + 1).toString(),
-          course: cert.course.title[language],
-          date: cert.issuedAt.toLocaleDateString(language),
+          course: cert.course?.title?.[language] || 'Nomaʼlum kurs',
+          date: format(cert.issuedAt || new Date(), 'dd/MM/yyyy'),
         }),
       )
       .join('\n\n');

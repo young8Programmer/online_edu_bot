@@ -34,7 +34,19 @@
         "notification_message_request": "Enter the notification message:",
         "password_request": "Please enter the admin password:",
         "logout": "🚪 Logout",
-        "create_course_prompt": "Please send the new course details in the following format:\n\nKurs nomi uz: <course name in Uzbek>\nKurs nomi ru: <course name in Russian>\nKurs nomi en: <course name in English>\nTa’rif uz: <course description in Uzbek>\nTa’rif ru: <course description in Russian>\nTa’rif en: <course description in English>\nNarx: <course price in UZS; if free, enter 0>\n\nExample:\nKurs nomi uz: Matematika asoslari\nKurs nomi ru: Основы математики\nKurs nomi en: Basics of Mathematics\nTa’rif uz: Bu kurs maktab matematika asoslarini o‘rgatadi.\nTa’rif ru: Этот курс обучает основам школьной математики.\nTa’rif en: This course teaches the basics of school-level math.\nNarx: 50000"
+        "create_course_prompt": "Please send the new course details in the following format:\n\nKurs nomi uz: <course name in Uzbek>\nKurs nomi ru: <course name in Russian>\nKurs nomi en: <course name in English>\nTa’rif uz: <course description in Uzbek>\nTa’rif ru: <course description in Russian>\nTa’rif en: <course description in English>\nNarx: <course price in UZS; if free, enter 0>\n\nExample:\nKurs nomi uz: Matematika asoslari\nKurs nomi ru: Основы математики\nKurs nomi en: Basics of Mathematics\nTa’rif uz: Bu kurs maktab matematika asoslarini o‘rgatadi.\nTa’rif ru: Этот курс обучает основам школьной математики.\nTa’rif en: This course teaches the basics of school-level math.\nNarx: 50000",
+        "create_lesson_prompt": "Please send the new lesson details in the following format:\n\nLesson title uz: <title in Uzbek>\nLesson title ru: <title in Russian>\nLesson title en: <title in English>\nContent type: <video/text/audio>\nContent link: <link>\nOrder: <number>\n\nExample:\nLesson title uz: Kirish darsi\nLesson title ru: Вводный урок\nLesson title en: Introduction Lesson\nContent type: video\nContent link: https://example.com/video\nOrder: 1",
+        "create_quiz_prompt": "Please send the new quiz details in the following format:\n\nQuestion uz: <question in Uzbek>\nQuestion ru: <question in Russian>\nQuestion en: <question in English>\nOptions uz: <option1, option2, option3, option4>\nOptions ru: <option1, option2, option3, option4>\nOptions en: <option1, option2, option3, option4>\nCorrect answer: <number 0-3>\n\nExample:\nQuestion uz: 2+2 nechchi?\nQuestion ru: Сколько будет 2+2?\nQuestion en: What is 2+2?\nOptions uz: 2, 3, 4, 5\nOptions ru: 2, 3, 4, 5\nOptions en: 2, 3, 4, 5\nCorrect answer: 2",
+        "select_course_to_delete": "Select a course to delete:",
+        "select_course_for_lesson": "Select a course to create a lesson:",
+        "select_course_for_lessons": "Select a course to view lessons:",
+        "select_course_to_delete_lesson": "Select a course to delete a lesson:",
+        "select_course_for_quiz": "Select a course to create a quiz:",
+        "select_course_for_quizzes": "Select a course to view quizzes:",
+        "select_course_to_delete_quiz": "Select a course to delete a quiz:",
+        "select_lesson_to_delete": "Select a lesson to delete:",
+        "select_quiz_to_delete": "Select a quiz to delete:",
+        "enter_broadcast_message": "Enter the broadcast message text:"
     },
     "success": {
         "registered": "✅ Registration successfully completed!",
@@ -45,6 +57,9 @@
         "course_deleted": "✅ Course successfully deleted: *{title}*",
         "lesson_deleted": "✅ Lesson successfully deleted: *{title}*",
         "quiz_deleted": "✅ Quiz successfully deleted: *{question}*",
+        "courses_created": "✅ {count} courses successfully created: {titles}",
+        "lessons_created": "✅ {count} lessons successfully created: {titles}",
+        "quizzes_created": "✅ {count} quizzes successfully created: {questions}",
         "broadcast_sent": "✅ Broadcast message successfully sent!",
         "correct_answer": "Correct answer!",
         "notification_sent": "✅ Notification successfully sent!",
@@ -54,10 +69,7 @@
         "logout": "🚪 You have logged out of the admin panel."
     },
     "errors": {
-        "errors": {
-            "no_payment_history": "You have no payment history."
-        },
-
+        "no_payment_history": "💸 You have no payment history.",
         "access_denied": "🚫 You don't have permission to perform this action!",
         "user_not_found": "🚫 User not found!",
         "invalid_email": "🚫 Invalid email format! Please enter a valid email.",
@@ -71,7 +83,8 @@
         "already_logged_in": "🚫 You are already logged in as an admin!",
         "invalid_password": "❌ Incorrect password. Try again.",
         "not_logged_in": "🚫 You are not logged in as an admin!",
-        "certificate_generation_failed": "🚫 Certificate generation failed: {reason}"
+        "certificate_generation_failed": "🚫 Certificate generation failed: {reason}",
+        "reset_quiz_failed": "🚫 Error resetting quizzes: {error}"
     },
     "register": {
         "phone_request": "📱 Please send your phone number to register:",
@@ -97,26 +110,42 @@
         "info": "📚 *Course:* {title}\n📝 *Description:* {description}\n💰 *Price:* {price}\n{access}",
         "start": "🚀 Start course",
         "access_granted": "✅ You have access to this course",
-        "access_denied": "🔒 Purchase the course"
+        "access_denied": "🔒 Purchase the course",
+        "free": "Free",
+        "back": "🔙 Back",
+        "course_not_found": "Course not found."
     },
     "lessons": {
         "no_lessons": "📖 No lessons available at the moment.",
         "list": "📖 *Available lessons:*",
         "info": "📚 *Lesson:* {title}\n📝 *Type:* {contentType}\n🔗 *Link:* {contentUrl}",
-        "complete": "✅ Complete lesson"
+        "complete": "✅ Complete lesson",
+        "type": "Type",
+        "url": "Link",
+        "order": "Order"
     },
     "quizzes": {
+        "start": "Start quiz",
         "no_quizzes": "📝 No quizzes available at the moment.",
         "list": "📝 *Available quizzes:*",
         "results_list": "📊 Select a course to view test results",
         "results": "📊 Results:",
         "no_results": "📝 You have no test results for this course.",
-        "result_item": "{index}. Question: {question}\nAnswer: {status}"
+        "result_item": "{index}. Question: {question}\nAnswer: {status}",
+        "all_completed": "🎉 You have completed all quizzes for this course!",
+        "next_quiz": "➡️ Next quiz",
+        "next_quiz_prompt": "Proceed to the next quiz by selecting one of the options below:",
+        "restart": "Restart quizzes"
     },
     "certificates": {
         "no_certificates": "🎖️ You don't have any certificates yet.",
         "list": "🎖️ Your certificates",
-        "certificate_caption": "🎉 Certificate for *{title}*"
+        "title": "Certificate",
+        "user": "{fullName} has successfully completed this course",
+        "course_completed": "Completed training in the following course",
+        "issued": "Issued on: {{date}}",
+        "certificate_caption": "Certificate for {{title}} course",
+        "error": "Error generating certificate"
     },
     "payment": {
         "no_payments": "💸 You don't have any payments yet.",

@@ -53,30 +53,42 @@ export class ViewResultsHandler {
 
     if (!user) {
       await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.user_not_found', language));
+      await bot.answerCallbackQuery(query.id);
       return;
     }
 
     const results = await this.quizService.getResults(user.telegramId, courseId);
     if (!results.length) {
       await bot.sendMessage(chatId, this.i18nService.getTranslation('quizzes.no_results', language));
+      await bot.answerCallbackQuery(query.id);
       return;
     }
 
     const message = results
       .map((result, index) => {
+        const quiz = result.quiz;
+        const status = result.isCorrect
+          ? this.i18nService.getTranslation('success.correct_answer', language)
+          : this.i18nService.getTranslation('errors.incorrect_answer', language, {
+              correctAnswer: quiz.options[language][quiz.correctAnswer],
+            });
         return this.i18nService.getTranslation('quizzes.result_item', language, {
           index: (index + 1).toString(),
-          question: result.quiz.question[language],
-          status: result.isCorrect ? this.i18nService.getTranslation('success.correct_answer', language) : this.i18nService.getTranslation('errors.incorrect_answer', language),
+          question: quiz.question[language],
+          status,
         });
       })
       .join('\n\n');
 
-    await bot.sendMessage(chatId, this.i18nService.getTranslation('quizzes.results', language) + '\n\n' + message, {
-      reply_markup: {
-        inline_keyboard: [[{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'list_courses' }]],
+    await bot.sendMessage(
+      chatId,
+      this.i18nService.getTranslation('quizzes.results', language) + '\n\n' + message,
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'list_courses' }]],
+        },
       },
-    });
+    );
     await bot.answerCallbackQuery(query.id);
   }
 }
