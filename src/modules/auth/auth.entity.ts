@@ -4,13 +4,18 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 export class Admin {
   @PrimaryGeneratedColumn()
   id: number;
-
-  @Column({ unique: true })
-  telegramId: string;
+@Column({ type: 'bigint', unique: true })
+telegramId: string;
 
   @Column()
   password: string;
 
   @Column({ default: false })
   isAdminMode: boolean;
+
+  @Column({ default: 0 })
+  loginAttempts: number;
+
+  @Column({ nullable: true })
+  lastAttemptAt: Date;
 }

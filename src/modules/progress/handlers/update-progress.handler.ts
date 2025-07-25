@@ -11,7 +11,7 @@ export class UpdateProgressHandler {
     private readonly lessonService: LessonService,
   ) {}
 
-  async handle(telegramId: string, lessonId: number, language: string = 'uz'): Promise<void> {
-    await this.progressService.updateProgress(telegramId, lessonId, language);
+  async handle(telegramId: string, lessonId: number): Promise<void> {
+    await this.progressService.updateProgress(telegramId, lessonId);
   }
 }

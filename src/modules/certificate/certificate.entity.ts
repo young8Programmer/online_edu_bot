@@ -13,8 +13,11 @@ export class Certificate {
   @ManyToOne(() => Course, (course) => course.id)
   course: Course;
 
-  @Column({ type: 'bytea', nullable: true }) // Yangi: pdf fayl xotirada saqlanadi
+  @Column({ type: 'bytea' })
   pdfBuffer: Buffer;
+
+  @Column({ nullable: true })
+  qrCode: string;
 
   @CreateDateColumn()
   issuedAt: Date;

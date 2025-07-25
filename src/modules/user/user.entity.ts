@@ -1,13 +1,15 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany, ManyToMany } from 'typeorm';
 import { QuizResult } from '../quiz/quiz-result.entity';
+import { Course } from '../course/course.entity';
 
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
+  
+  @Column({ type: 'bigint', unique: true })
+telegramId: string;
 
-  @Column({ unique: true })
-  telegramId: string;
 
   @Column()
   fullName: string;
@@ -29,4 +31,7 @@ export class User {
 
   @OneToMany(() => QuizResult, (quizResult) => quizResult.user)
   quizResults: QuizResult[];
+  
+  @ManyToMany(() => Course, (course) => course.users)
+  courses: Course[];
 }

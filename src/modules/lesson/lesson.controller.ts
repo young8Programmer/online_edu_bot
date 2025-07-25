@@ -12,17 +12,29 @@ export class LessonController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<Lesson> {
-    const lesson = await this.lessonService.findById(parseInt(id, 10));
-    if (!lesson) {
-      throw new Error('Dars topilmadi');
-    }
-    return lesson;
+  async findById(@Param('id') id: string): Promise<Lesson | null> {
+    return this.lessonService.findById(parseInt(id, 10));
   }
 
   @Post()
-  async create(@Body() data: { courseId: number; title: { uz: string; ru: string; en: string }; contentType: string; contentUrl: string; order: number }): Promise<Lesson> {
+  async create(@Body() data: {
+    courseId: number;
+    title: { uz: string; ru: string; en: string };
+    contentType: string;
+    contentUrl: string;
+    order: number;
+  }): Promise<Lesson> {
     return this.lessonService.createLesson(data);
+  }
+
+  @Post(':id')
+  async update(@Param('id') id: string, @Body() data: {
+    title?: { uz: string; ru: string; en: string };
+    contentType?: string;
+    contentUrl?: string;
+    order?: number;
+  }): Promise<void> {
+    await this.lessonService.updateLesson(parseInt(id, 10), data);
   }
 
   @Delete(':id')

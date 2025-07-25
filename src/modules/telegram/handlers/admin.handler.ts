@@ -7,6 +7,7 @@ import { LessonService } from '../../lesson/lesson.service';
 import { QuizService } from '../../quiz/quiz.service';
 import { I18nService } from '../../i18n/i18n.service';
 import { NotificationService } from '../../notification/notification.service';
+import { PaymentService } from '../../payment/payment.service';
 import * as TelegramBot from 'node-telegram-bot-api';
 
 interface CourseInput {
@@ -32,9 +33,9 @@ interface QuizInput {
   question_uz: string;
   question_ru: string;
   question_en: string;
-  options_uz: string;
-  options_ru: string;
-  options_en: string;
+  options_uz: string[];
+  options_ru: string[];
+  options_en: string[];
   correctAnswer: number;
 }
 
@@ -50,11 +51,12 @@ export class AdminHandler {
     private readonly quizService: QuizService,
     private readonly i18nService: I18nService,
     private readonly notificationService: NotificationService,
+    private readonly paymentService: PaymentService,
   ) {}
 
   async handle(msg: TelegramBot.Message, bot: TelegramBot) {
     const chatId = msg.chat.id;
-    const telegramId = msg.from.id.toString();
+    const telegramId = BigInt(msg.from.id).toString();
     const user = await this.userService.findByTelegramId(telegramId);
     const language = user?.language && ['uz', 'ru', 'en'].includes(user.language) ? user.language : 'uz';
 
@@ -66,9 +68,8 @@ export class AdminHandler {
     }
 
     if (msg.text === '/admin') {
-      await this.authService.setAdminMode(telegramId, true);
       const message = this.i18nService.getTranslation('admin.panel', language);
-      await this.telegramService.sendMessageWithAdminMenu(chatId, message, language);
+      await this.sendMessageWithAdminMenu(chatId, message, language);
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.user_stats', language)) {
       try {
@@ -81,50 +82,74 @@ export class AdminHandler {
                          ? users.map(user =>
                              this.i18nService.getTranslation('stats.user_info', language, {
                                id: user.telegramId,
-                               name: user.fullName || 'N/A',
+                               name: this.escapeMarkdown(user.fullName || 'N/A'),
                                phone: user.phoneNumber || 'N/A',
                                email: user.email || 'N/A',
                              })
                            ).join('\n\n')
                          : this.i18nService.getTranslation('errors.user_not_found', language));
-        await this.telegramService.sendMessageWithAdminMenu(chatId, message, language);
+        await this.telegramService.sendMessage(chatId, message, { parse_mode: 'Markdown' });
         return;
       } catch (error) {
-        const message = this.i18nService.getTranslation('errors.user_not_found', language);
-        await this.telegramService.sendMessageWithAdminMenu(chatId, message, language);
+        const message = this.i18nService.getTranslation('errors.user_fetch_error', language) || 'Foydalanuvchilar ma\'lumotlarini olishda xato yuz berdi';
+        await this.sendMessageWithAdminMenu(chatId, message, language);
         return;
       }
-    } else if (msg.text === this.i18nService.getTranslation('admin.payment_history', language)) {
-      const message = this.i18nService.getTranslation('admin.payment_history', language) + '\n' +
-                     this.i18nService.getTranslation('errors.no_payment_history', language);
-      await this.telegramService.sendMessageWithAdminMenu(chatId, message, language);
-      return;
+    } else if (msg.text === this.i18nService.getTranslation('admin.user_payments', language)) {
+      try {
+        const payments = await this.paymentService.getAllPayments();
+        const message = payments.length > 0
+          ? this.i18nService.getTranslation('admin.user_payments', language) + '\n\n' +
+            payments.map((payment, index) =>
+              `${index + 1}. *${this.escapeMarkdown(payment.course.title[language])}*\n` +
+              `👤 *${this.i18nService.getTranslation('payment.user', language)}*: ${this.escapeMarkdown(payment.user.fullName || 'N/A')}\n` +
+              `💰 *${this.i18nService.getTranslation('payment.amount', language)}*: ${payment.amount} UZS\n` +
+              `📅 *${this.i18nService.getTranslation('payment.date', language)}*: ${payment.createdAt.toLocaleDateString()}\n` +
+              `🔖 *${this.i18nService.getTranslation('payment.status', language)}*: ${this.escapeMarkdown(payment.status)}`
+            ).join('\n\n')
+          : this.i18nService.getTranslation('admin.no_user_payments', language) || 'Hozircha foydalanuvchi to‘lovlari mavjud emas';
+        await this.telegramService.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+        return;
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.payment_fetch_error', language) || 'Foydalanuvchi to‘lovlarini olishda xato yuz berdi';
+        await this.sendMessageWithAdminMenu(chatId, message, language);
+        return;
+      }
     } else if (msg.text === this.i18nService.getTranslation('admin.broadcast', language)) {
       await bot.sendMessage(
         chatId,
         this.i18nService.getTranslation('admin.broadcast', language) + '\n' +
         this.i18nService.getTranslation('admin.enter_broadcast_message', language),
-        {
-          reply_markup: { force_reply: true },
-        },
+        { reply_markup: { force_reply: true } },
       );
       bot.once('message', async (reply) => {
         if (reply.chat.id === chatId) {
           try {
-            await this.notificationService.broadcast(reply.text, { parse_mode: 'Markdown' });
+            await this.notificationService.broadcast(this.escapeMarkdown(reply.text), { parse_mode: 'Markdown' });
             const message = this.i18nService.getTranslation('success.broadcast_sent', language);
-            await this.telegramService.sendMessageWithAdminMenu(chatId, message, language);
+            await this.sendMessageWithAdminMenu(chatId, message, language);
           } catch (error) {
             const message = this.i18nService.getTranslation('errors.invalid_input', language);
-            await this.telegramService.sendMessageWithAdminMenu(chatId, message, language);
+            await this.sendMessageWithAdminMenu(chatId, message, language);
           }
         }
       });
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.user_panel', language)) {
-      await this.authService.setAdminMode(telegramId, false);
-      const message = this.i18nService.getTranslation('menu.user_panel', language);
-      await this.telegramService.sendMessageWithMenu(chatId, message, language, telegramId);
+  const message = this.i18nService.getTranslation('welcome.message', language, { name: user ? user.fullName || 'Foydalanuvchi' : 'Foydalanuvchi' });
+  this.telegramService.setForceUserPanel(String(chatId), true);
+  await this.telegramService.sendMessageWithMenu(chatId, message, language, telegramId, true, user);
+  return;
+    } else if (msg.text === this.i18nService.getTranslation('menu.language', language)) {
+      await bot.sendMessage(chatId, this.i18nService.getTranslation('language.select', language), {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🇺🇿 O‘zbek', callback_data: 'lang_uz' }],
+            [{ text: '🇷🇺 Русский', callback_data: 'lang_ru' }],
+            [{ text: '🇬🇧 English', callback_data: 'lang_en' }],
+          ],
+        },
+      });
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.manage_courses', language)) {
       const message = this.i18nService.getTranslation('admin.manage_courses', language);
@@ -148,8 +173,21 @@ export class AdminHandler {
         if (reply.chat.id === chatId) {
           try {
             const coursesData = this.parseMultipleCourseInput(reply.text, language);
-            const createdCourses = await this.courseService.createCourses(coursesData);
-            const message = this.i18nService.getTranslation('success.course_created', language, { title: createdCourses.map(c => c.title[language]).join(', ') });
+            const createdCourses = await this.courseService.createCourses(coursesData.map(courseData => ({
+              title: {
+                uz: courseData.title_uz,
+                ru: courseData.title_ru,
+                en: courseData.title_en,
+              },
+              description: {
+                uz: courseData.desc_uz,
+                ru: courseData.desc_ru,
+                en: courseData.desc_en,
+              },
+              price: courseData.price,
+              isPaid: courseData.price > 0,
+            })));
+            const message = this.i18nService.getTranslation('success.course_created', language, { title: createdCourses.map(c => this.escapeMarkdown(c.title[language])).join(', ') });
             await this.sendManageCoursesMenu(chatId, message, language);
           } catch (error) {
             const message = this.i18nService.getTranslation('errors.invalid_input', language);
@@ -158,180 +196,226 @@ export class AdminHandler {
         }
       });
       return;
-    } else if (msg.text === this.i18nService.getTranslation('admin.view_courses', language)) {
-      const courses = await this.courseService.findAll();
-      const message = courses.length > 0
-        ? this.i18nService.getTranslation('courses.list', language) + '\n\n' +
-          courses.map((course, index) =>
-            `${index + 1}. *${this.escapeMarkdown(course.title[language])}*\n` +
-            `📝 ${this.escapeMarkdown(course.description[language])}\n` +
-            `💰 ${course.isPaid ? `${course.price} UZS` : this.i18nService.getTranslation('courses.free', language)}`
-          ).join('\n\n')
-        : this.i18nService.getTranslation('courses.no_courses', language);
-      await this.sendManageCoursesMenu(chatId, message, language);
+    } else if (msg.text?.trim() === this.i18nService.getTranslation('admin.view_courses', language).trim()) {
+      try {
+        const courses = await this.courseService.findAll();
+        const message =
+          courses.length > 0
+            ? this.i18nService.getTranslation('courses.list', language) + '\n\n' +
+              courses.map((course, index) =>
+                `${index + 1}. *${this.escapeMarkdown(course.title[language])}*\n` +
+                `📝 ${this.escapeMarkdown(course.description[language])}\n` +
+                `💰 ${course.isPaid ? `${course.price} UZS` : this.i18nService.getTranslation('courses.free', language)}`
+              ).join('\n\n')
+            : this.i18nService.getTranslation('courses.no_courses', language);
+        await this.sendManageCoursesMenu(chatId, message, language);
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.course_fetch_error', language) || 'Kurslarni olishda xato yuz berdi';
+        await this.sendManageCoursesMenu(chatId, message, language);
+      }
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.delete_course', language)) {
-      const courses = await this.courseService.findAll();
-      if (!courses.length) {
-        const message = this.i18nService.getTranslation('courses.no_courses', language);
+      try {
+        const courses = await this.courseService.findAll();
+        if (!courses.length) {
+          const message = this.i18nService.getTranslation('courses.no_courses', language);
+          await this.sendManageCoursesMenu(chatId, message, language);
+          return;
+        }
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: courses.map((course) => [
+              { text: this.escapeMarkdown(course.title[language]), callback_data: `delete_course_${course.id}` },
+            ]),
+          },
+        };
+        await bot.sendMessage(
+          chatId,
+          this.i18nService.getTranslation('admin.delete_course', language) + '\n' +
+          this.i18nService.getTranslation('admin.select_course_to_delete', language),
+          keyboard,
+        );
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.course_fetch_error', language) || 'Kurslarni olishda xato yuz berdi';
         await this.sendManageCoursesMenu(chatId, message, language);
-        return;
       }
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: courses.map((course) => [
-            { text: this.escapeMarkdown(course.title[language]), callback_data: `delete_course_${course.id}` },
-          ]),
-        },
-      };
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('admin.delete_course', language) + '\n' +
-        this.i18nService.getTranslation('admin.select_course_to_delete', language),
-        keyboard,
-      );
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.create_lesson', language)) {
-      const courses = await this.courseService.findAll();
-      if (!courses.length) {
-        const message = this.i18nService.getTranslation('courses.no_courses', language);
+      try {
+        const courses = await this.courseService.findAll();
+        if (!courses.length) {
+          const message = this.i18nService.getTranslation('courses.no_courses', language);
+          await this.sendManageLessonsMenu(chatId, message, language);
+          return;
+        }
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: courses.map((course) => [
+              { text: this.escapeMarkdown(course.title[language]), callback_data: `create_lesson_course_${course.id}` },
+            ]),
+          },
+        };
+        await bot.sendMessage(
+          chatId,
+          this.i18nService.getTranslation('admin.create_lesson', language) + '\n' +
+          this.i18nService.getTranslation('admin.select_course_for_lesson', language),
+          keyboard,
+        );
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.course_fetch_error', language) || 'Kurslarni olishda xato yuz berdi';
         await this.sendManageLessonsMenu(chatId, message, language);
-        return;
       }
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: courses.map((course) => [
-            { text: this.escapeMarkdown(course.title[language]), callback_data: `create_lesson_course_${course.id}` },
-          ]),
-        },
-      };
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('admin.create_lesson', language) + '\n' +
-        this.i18nService.getTranslation('admin.select_course_for_lesson', language),
-        keyboard,
-      );
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.view_lessons', language)) {
-      const courses = await this.courseService.findAll();
-      if (!courses.length) {
-        const message = this.i18nService.getTranslation('courses.no_courses', language);
+      try {
+        const courses = await this.courseService.findAll();
+        if (!courses.length) {
+          const message = this.i18nService.getTranslation('courses.no_courses', language);
+          await this.sendManageLessonsMenu(chatId, message, language);
+          return;
+        }
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: courses.map((course) => [
+              { text: this.escapeMarkdown(course.title[language]), callback_data: `view_lessons_course_${course.id}` },
+            ]),
+          },
+        };
+        await bot.sendMessage(
+          chatId,
+          this.i18nService.getTranslation('admin.view_lessons', language) + '\n' +
+          this.i18nService.getTranslation('admin.select_course_for_lessons', language),
+          keyboard,
+        );
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.course_fetch_error', language) || 'Kurslarni olishda xato yuz berdi';
         await this.sendManageLessonsMenu(chatId, message, language);
-        return;
       }
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: courses.map((course) => [
-            { text: this.escapeMarkdown(course.title[language]), callback_data: `view_lessons_course_${course.id}` },
-          ]),
-        },
-      };
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('admin.view_lessons', language) + '\n' +
-        this.i18nService.getTranslation('admin.select_course_for_lessons', language),
-        keyboard,
-      );
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.delete_lesson', language)) {
-      const courses = await this.courseService.findAll();
-      if (!courses.length) {
-        const message = this.i18nService.getTranslation('courses.no_courses', language);
+      try {
+        const courses = await this.courseService.findAll();
+        if (!courses.length) {
+          const message = this.i18nService.getTranslation('courses.no_courses', language);
+          await this.sendManageLessonsMenu(chatId, message, language);
+          return;
+        }
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: courses.map((course) => [
+              { text: this.escapeMarkdown(course.title[language]), callback_data: `delete_lesson_course_${course.id}` },
+            ]),
+          },
+        };
+        await bot.sendMessage(
+          chatId,
+          this.i18nService.getTranslation('admin.delete_lesson', language) + '\n' +
+          this.i18nService.getTranslation('admin.select_course_to_delete_lesson', language),
+          keyboard,
+        );
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.course_fetch_error', language) || 'Kurslarni olishda xato yuz berdi';
         await this.sendManageLessonsMenu(chatId, message, language);
-        return;
       }
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: courses.map((course) => [
-            { text: this.escapeMarkdown(course.title[language]), callback_data: `delete_lesson_course_${course.id}` },
-          ]),
-        },
-      };
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('admin.delete_lesson', language) + '\n' +
-        this.i18nService.getTranslation('admin.select_course_to_delete_lesson', language),
-        keyboard,
-      );
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.create_quiz', language)) {
-      const courses = await this.courseService.findAll();
-      if (!courses.length) {
-        const message = this.i18nService.getTranslation('courses.no_courses', language);
+      try {
+        const courses = await this.courseService.findAll();
+        if (!courses.length) {
+          const message = this.i18nService.getTranslation('courses.no_courses', language);
+          await this.sendManageQuizzesMenu(chatId, message, language);
+          return;
+        }
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: courses.map((course) => [
+              { text: this.escapeMarkdown(course.title[language]), callback_data: `create_quiz_course_${course.id}` },
+            ]),
+          },
+        };
+        await bot.sendMessage(
+          chatId,
+          this.i18nService.getTranslation('admin.create_quiz', language) + '\n' +
+          this.i18nService.getTranslation('admin.select_course_for_quiz', language),
+          keyboard,
+        );
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.course_fetch_error', language) || 'Kurslarni olishda xato yuz berdi';
         await this.sendManageQuizzesMenu(chatId, message, language);
-        return;
       }
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: courses.map((course) => [
-            { text: this.escapeMarkdown(course.title[language]), callback_data: `create_quiz_course_${course.id}` },
-          ]),
-        },
-      };
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('admin.create_quiz', language) + '\n' +
-        this.i18nService.getTranslation('admin.select_course_for_quiz', language),
-        keyboard,
-      );
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.view_quizzes', language)) {
-      const courses = await this.courseService.findAll();
-      if (!courses.length) {
-        const message = this.i18nService.getTranslation('courses.no_courses', language);
+      try {
+        const courses = await this.courseService.findAll();
+        if (!courses.length) {
+          const message = this.i18nService.getTranslation('courses.no_courses', language);
+          await this.sendManageQuizzesMenu(chatId, message, language);
+          return;
+        }
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: courses.map((course) => [
+              { text: this.escapeMarkdown(course.title[language]), callback_data: `view_quizzes_course_${course.id}` },
+            ]),
+          },
+        };
+        await bot.sendMessage(
+          chatId,
+          this.i18nService.getTranslation('admin.view_quizzes', language) + '\n' +
+          this.i18nService.getTranslation('admin.select_course_for_quizzes', language),
+          keyboard,
+        );
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.quiz_fetch_error', language) || 'Testlarni olishda xato yuz berdi';
         await this.sendManageQuizzesMenu(chatId, message, language);
-        return;
       }
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: courses.map((course) => [
-            { text: this.escapeMarkdown(course.title[language]), callback_data: `view_quizzes_course_${course.id}` },
-          ]),
-        },
-      };
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('admin.view_quizzes', language) + '\n' +
-        this.i18nService.getTranslation('admin.select_course_for_quizzes', language),
-        keyboard,
-      );
       return;
     } else if (msg.text === this.i18nService.getTranslation('admin.delete_quiz', language)) {
-      const courses = await this.courseService.findAll();
-      if (!courses.length) {
-        const message = this.i18nService.getTranslation('courses.no_courses', language);
+      try {
+        const courses = await this.courseService.findAll();
+        if (!courses.length) {
+          const message = this.i18nService.getTranslation('courses.no_courses', language);
+          await this.sendManageQuizzesMenu(chatId, message, language);
+          return;
+        }
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: courses.map((course) => [
+              { text: this.escapeMarkdown(course.title[language]), callback_data: `delete_quiz_course_${course.id}` },
+            ]),
+          },
+        };
+        await bot.sendMessage(
+          chatId,
+          this.i18nService.getTranslation('admin.delete_quiz', language) + '\n' +
+          this.i18nService.getTranslation('admin.select_course_to_delete_quiz', language),
+          keyboard,
+        );
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.quiz_fetch_error', language) || 'Testlarni olishda xato yuz berdi';
         await this.sendManageQuizzesMenu(chatId, message, language);
-        return;
       }
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: courses.map((course) => [
-            { text: this.escapeMarkdown(course.title[language]), callback_data: `delete_quiz_course_${course.id}` },
-          ]),
-        },
-      };
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('admin.delete_quiz', language) + '\n' +
-        this.i18nService.getTranslation('admin.select_course_to_delete_quiz', language),
-        keyboard,
-      );
-      return;
-    } else if (msg.text === this.i18nService.getTranslation('admin.back', language)) {
-      const message = this.i18nService.getTranslation('admin.panel', language);
-      await this.telegramService.sendMessageWithAdminMenu(chatId, message, language);
       return;
     }
   }
 
   async handleCallback(query: TelegramBot.CallbackQuery, bot: TelegramBot) {
     const chatId = query.message.chat.id;
-    const telegramId = query.from.id.toString();
+    const telegramId = BigInt(query.from.id).toString();
     const user = await this.userService.findByTelegramId(telegramId);
     const language = user?.language && ['uz', 'ru', 'en'].includes(user.language) ? user.language : 'uz';
     const data = query.data;
 
-    if (data.startsWith('delete_course_')) {
+    if (data === 'manage_courses_back' || data === 'delete_course_back') {
+      const message = this.i18nService.getTranslation('admin.manage_courses', language);
+      await this.sendManageCoursesMenu(chatId, message, language);
+    } else if (data === 'manage_lessons_back' || data === 'delete_lesson_back') {
+      const message = this.i18nService.getTranslation('admin.manage_lessons', language);
+      await this.sendManageLessonsMenu(chatId, message, language);
+    } else if (data === 'manage_quizzes_back' || data === 'delete_quiz_back') {
+      const message = this.i18nService.getTranslation('admin.manage_quizzes', language);
+      await this.sendManageQuizzesMenu(chatId, message, language);
+    } else if (data.startsWith('delete_course_')) {
       const courseId = parseInt(data.split('_')[2], 10);
       const course = await this.courseService.findById(courseId);
       if (!course) {
@@ -359,8 +443,18 @@ export class AdminHandler {
         if (reply.chat.id === chatId) {
           try {
             const lessonsData = this.parseMultipleLessonInput(reply.text, language);
-            const createdLessons = await this.lessonService.createLessons(courseId, lessonsData);
-            const message = this.i18nService.getTranslation('success.lesson_created', language, { title: createdLessons.map(l => l.title[language]).join(', ') });
+            const createdLessons = await this.lessonService.createLessons(lessonsData.map(lessonData => ({
+              courseId,
+              title: {
+                uz: lessonData.title_uz,
+                ru: lessonData.title_ru,
+                en: lessonData.title_en,
+              },
+              contentType: lessonData.contentType,
+              contentUrl: lessonData.contentUrl,
+              order: lessonData.order,
+            })));
+            const message = this.i18nService.getTranslation('success.lesson_created', language, { title: createdLessons.map(l => this.escapeMarkdown(l.title[language])).join(', ') });
             await this.sendManageLessonsMenu(chatId, message, language);
           } catch (error) {
             const message = this.i18nService.getTranslation('errors.invalid_input', language);
@@ -370,38 +464,62 @@ export class AdminHandler {
       });
     } else if (data.startsWith('view_lessons_course_')) {
       const courseId = parseInt(data.split('_')[3], 10);
-      const lessons = await this.lessonService.findByCourseId(courseId);
-      const message = lessons.length > 0
-        ? this.i18nService.getTranslation('lessons.list', language) + '\n\n' +
-          lessons.map((lesson, index) =>
-            `${index + 1}. *${this.escapeMarkdown(lesson.title[language])}*\n` +
-            `📝 *${this.i18nService.getTranslation('lessons.type', language)}*: ${this.escapeMarkdown(lesson.contentType)}\n` +
-            `🔗 *${this.i18nService.getTranslation('lessons.url', language)}*: ${this.escapeMarkdown(lesson.contentUrl)}\n` +
-            `🔢 *${this.i18nService.getTranslation('lessons.order', language)}*: ${lesson.order}`
-          ).join('\n\n')
-        : this.i18nService.getTranslation('lessons.no_lessons', language);
-      await this.sendManageLessonsMenu(chatId, message, language);
-    } else if (data.startsWith('delete_lesson_course_')) {
-      const courseId = parseInt(data.split('_')[3], 10);
-      const lessons = await this.lessonService.findByCourseId(courseId);
-      if (!lessons.length) {
-        const message = this.i18nService.getTranslation('lessons.no_lessons', language);
+      const course = await this.courseService.findById(courseId);
+      if (!course) {
+        const message = this.i18nService.getTranslation('errors.course_not_found', language);
         await this.sendManageLessonsMenu(chatId, message, language);
         return;
       }
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: lessons.map((lesson) => [
-            { text: this.escapeMarkdown(lesson.title[language]), callback_data: `delete_lesson_${lesson.id}` },
-          ]),
-        },
-      };
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('admin.delete_lesson', language) + '\n' +
-        this.i18nService.getTranslation('admin.select_lesson_to_delete', language),
-        keyboard,
-      );
+      try {
+        const lessons = await this.lessonService.findByCourseId(courseId);
+        const message = lessons.length > 0
+          ? this.i18nService.getTranslation('lessons.list', language) + '\n\n' +
+            lessons.map((lesson, index) =>
+              `${index + 1}. *${this.escapeMarkdown(lesson.title[language])}*\n` +
+              `📝 *${this.i18nService.getTranslation('lessons.type', language)}*: ${this.escapeMarkdown(lesson.contentType)}\n` +
+              `🔗 *${this.i18nService.getTranslation('lessons.url', language)}*: ${this.escapeMarkdown(lesson.contentUrl)}\n` +
+              `🔢 *${this.i18nService.getTranslation('lessons.order', language)}*: ${lesson.order}`
+            ).join('\n\n')
+          : this.i18nService.getTranslation('lessons.no_lessons', language);
+        await this.telegramService.sendMessage(chatId, message, {
+          parse_mode: 'Markdown'
+        });
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.lesson_fetch_error', language) || 'Darslarni olishda xato yuz berdi';
+        await this.sendManageLessonsMenu(chatId, message, language);
+      }
+    } else if (data.startsWith('delete_lesson_course_')) {
+      const courseId = parseInt(data.split('_')[3], 10);
+      const course = await this.courseService.findById(courseId);
+      if (!course) {
+        const message = this.i18nService.getTranslation('errors.course_not_found', language);
+        await this.sendManageLessonsMenu(chatId, message, language);
+        return;
+      }
+      try {
+        const lessons = await this.lessonService.findByCourseId(courseId);
+        if (!lessons.length) {
+          const message = this.i18nService.getTranslation('lessons.no_lessons', language);
+          await this.sendManageLessonsMenu(chatId, message, language);
+          return;
+        }
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: lessons.map((lesson) => [
+              { text: this.escapeMarkdown(lesson.title[language]), callback_data: `delete_lesson_${lesson.id}` },
+            ]),
+          },
+        };
+        await bot.sendMessage(
+          chatId,
+          this.i18nService.getTranslation('admin.delete_lesson', language) + '\n' +
+          this.i18nService.getTranslation('admin.select_lesson_to_delete', language),
+          keyboard,
+        );
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.lesson_fetch_error', language) || 'Darslarni olishda xato yuz berdi';
+        await this.sendManageLessonsMenu(chatId, message, language);
+      }
     } else if (data.startsWith('delete_lesson_')) {
       const lessonId = parseInt(data.split('_')[2], 10);
       const lesson = await this.lessonService.findById(lessonId);
@@ -430,8 +548,24 @@ export class AdminHandler {
         if (reply.chat.id === chatId) {
           try {
             const quizzesData = this.parseMultipleQuizInput(reply.text, language);
-            const createdQuizzes = await this.quizService.createQuizzes(courseId, quizzesData);
-            const message = this.i18nService.getTranslation('success.quiz_created', language, { question: createdQuizzes.map(q => q.question[language]).join(', ') });
+            const createdQuizzes = await this.quizService.createQuizzes(quizzesData.map(quizData => ({
+              courseId,
+              questions: [{
+                question: {
+                  uz: quizData.question_uz,
+                  ru: quizData.question_ru,
+                  en: quizData.question_en,
+                },
+                options: [
+                  { uz: quizData.options_uz[0], ru: quizData.options_ru[0], en: quizData.options_en[0] },
+                  { uz: quizData.options_uz[1], ru: quizData.options_ru[1], en: quizData.options_en[1] },
+                  { uz: quizData.options_uz[2], ru: quizData.options_ru[2], en: quizData.options_en[2] },
+                  { uz: quizData.options_uz[3], ru: quizData.options_ru[3], en: quizData.options_en[3] },
+                ],
+                correct: quizData.correctAnswer,
+              }],
+            })));
+            const message = this.i18nService.getTranslation('success.quiz_created', language, { question: createdQuizzes.map(q => this.escapeMarkdown(q.questions[0].question[language])).join(', ') });
             await this.sendManageQuizzesMenu(chatId, message, language);
           } catch (error) {
             const message = this.i18nService.getTranslation('errors.invalid_input', language);
@@ -447,55 +581,60 @@ export class AdminHandler {
         await this.sendManageQuizzesMenu(chatId, message, language);
         return;
       }
-      const quizzes = await this.quizService.findByCourseId(courseId);
-      if (!quizzes.length) {
-        const message = this.i18nService.getTranslation('quizzes.no_quizzes', language);
-        await this.sendManageQuizzesMenu(chatId, message, language);
-        return;
-      }
-      const messages: string[] = [];
-      let currentMessage: string = this.i18nService.getTranslation('quizzes.list', language) + '\n\n';
-      for (const [index, quiz] of quizzes.entries()) {
-        const questionText = this.escapeMarkdown(quiz.question[language]);
-        const options = quiz.options as Record<string, string[]>;
-        const formattedOptions = options[language].map(opt => this.escapeMarkdown(opt)).join(', ');
-        const correctAnswer = this.escapeMarkdown(options[language][quiz.correctAnswer]);
-        const quizText = `${index + 1}. *${questionText}*\n` +
-                         `📝 *Variantlar:* ${formattedOptions}\n` +
-                         `✅ *To‘g‘ri javob:* ${correctAnswer}`;
-        if ((currentMessage + quizText + '\n\n').length > 4000) {
-          messages.push(currentMessage);
-          currentMessage = '';
-        }
-        currentMessage += quizText + '\n\n';
-      }
-      if (currentMessage) {
-        messages.push(currentMessage);
-      }
-      for (const message of messages) {
+      try {
+        const quizzes = await this.quizService.findByCourseId(courseId);
+        const message = quizzes.length > 0
+          ? this.i18nService.getTranslation('quizzes.list', language) + '\n\n' +
+            quizzes.map((quiz, index) => {
+              const question = quiz.questions[0];
+              const questionText = this.escapeMarkdown(question?.question[language] || 'Quiz');
+              const options = question?.options.map(opt => opt[language]) || [];
+              const formattedOptions = options.length > 0 ? options.map(opt => this.escapeMarkdown(opt)).join(', ') : 'N/A';
+              const correctAnswer = options.length > question.correct ? this.escapeMarkdown(options[question.correct]) : 'N/A';
+              return `${index + 1}. *${questionText}*\n` +
+                     `📝 *${this.i18nService.getTranslation('quizzes.options', language)}*: ${formattedOptions}\n` +
+                     `✅ *${this.i18nService.getTranslation('quizzes.correct', language)}*: ${correctAnswer}`;
+            }).join('\n\n')
+          : this.i18nService.getTranslation('quizzes.no_quizzes_for_course', language);
+        await this.telegramService.sendMessage(chatId, message, {
+          parse_mode: 'Markdown'
+        });
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.quiz_fetch_error', language) || 'Testlarni olishda xato yuz berdi';
         await this.sendManageQuizzesMenu(chatId, message, language);
       }
     } else if (data.startsWith('delete_quiz_course_')) {
       const courseId = parseInt(data.split('_')[3], 10);
-      const quizzes = await this.quizService.findByCourseId(courseId);
-      if (!quizzes.length) {
-        const message = this.i18nService.getTranslation('quizzes.no_quizzes', language);
+      const course = await this.courseService.findById(courseId);
+      if (!course) {
+        const message = this.i18nService.getTranslation('errors.course_not_found', language);
         await this.sendManageQuizzesMenu(chatId, message, language);
         return;
       }
-      const keyboard = {
-        reply_markup: {
-          inline_keyboard: quizzes.map((quiz) => [
-            { text: this.escapeMarkdown(quiz.question[language]), callback_data: `delete_quiz_${quiz.id}` },
-          ]),
-        },
-      };
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('admin.delete_quiz', language) + '\n' +
-        this.i18nService.getTranslation('admin.select_quiz_to_delete', language),
-        keyboard,
-      );
+      try {
+        const quizzes = await this.quizService.findByCourseId(courseId);
+        if (!quizzes.length) {
+          const message = this.i18nService.getTranslation('quizzes.no_quizzes_for_course', language);
+          await this.sendManageQuizzesMenu(chatId, message, language);
+          return;
+        }
+        const keyboard = {
+          reply_markup: {
+            inline_keyboard: quizzes.map((quiz) => [
+              { text: this.escapeMarkdown(quiz.questions[0]?.question[language] || 'Quiz'), callback_data: `delete_quiz_${quiz.id}` },
+            ]),
+          },
+        };
+        await bot.sendMessage(
+          chatId,
+          this.i18nService.getTranslation('admin.delete_quiz', language) + '\n' +
+          this.i18nService.getTranslation('admin.select_quiz_to_delete', language),
+          keyboard,
+        );
+      } catch (error) {
+        const message = this.i18nService.getTranslation('errors.quiz_fetch_error', language) || 'Testlarni olishda xato yuz berdi';
+        await this.sendManageQuizzesMenu(chatId, message, language);
+      }
     } else if (data.startsWith('delete_quiz_')) {
       const quizId = parseInt(data.split('_')[2], 10);
       const quiz = await this.quizService.findById(quizId);
@@ -505,10 +644,42 @@ export class AdminHandler {
         return;
       }
       await this.quizService.deleteQuiz(quizId);
-      const message = this.i18nService.getTranslation('success.quiz_deleted', language, { question: this.escapeMarkdown(quiz.question[language]) });
+      const message = this.i18nService.getTranslation('success.quiz_deleted', language, { question: this.escapeMarkdown(quiz.questions[0]?.question[language] || 'Quiz') });
       await this.sendManageQuizzesMenu(chatId, message, language);
     }
     await bot.answerCallbackQuery(query.id);
+  }
+
+  async sendMessageWithAdminMenu(chatId: number, message: string, language: string): Promise<void> {
+    await this.telegramService.sendMessage(chatId, message, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        keyboard: [
+          [
+            { text: this.i18nService.getTranslation('admin.user_stats', language) },
+            { text: this.i18nService.getTranslation('admin.user_payments', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('admin.broadcast', language) },
+            { text: this.i18nService.getTranslation('admin.user_panel', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('admin.manage_courses', language) },
+            { text: this.i18nService.getTranslation('admin.manage_lessons', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('admin.manage_quizzes', language) },
+            { text: this.i18nService.getTranslation('menu.profile', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('menu.language', language) },
+            { text: this.i18nService.getTranslation('menu.help', language) },
+          ],
+        ],
+        resize_keyboard: true,
+        persistent: true,
+      },
+    });
   }
 
   private async sendManageCoursesMenu(chatId: number, message: string, language: string): Promise<void> {
@@ -561,7 +732,7 @@ export class AdminHandler {
             { text: this.i18nService.getTranslation('admin.view_quizzes', language) },
           ],
           [
-            { text: this.i18nService.getTranslation('admin.delete_quiz', language) },
+                 { text: this.i18nService.getTranslation('admin.delete_quiz', language) },
             { text: this.i18nService.getTranslation('admin.back', language) },
           ],
         ],
@@ -609,41 +780,48 @@ export class AdminHandler {
     return result;
   }
 
-  private parseMultipleLessonInput(input: string, language: string): LessonInput[] {
-    const lessons = input.split('\n---\n').map(item => item.trim());
-    const result: LessonInput[] = [];
-    for (const lesson of lessons) {
-      const lines = lesson.split('\n').map(line => line.trim());
-      const expectedFormat = [
-        'Dars nomi uz', 'Dars nomi ru', 'Dars nomi en',
-        'Kontent turi', 'Kontent havolasi', 'Tartib',
-      ];
-      if (lines.length < expectedFormat.length) {
-        throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+ private parseMultipleLessonInput(input: string, language: string): LessonInput[] {
+  const lessons = input.split('\n---\n').map(item => item.trim());
+  const result: LessonInput[] = [];
+
+  for (const lesson of lessons) {
+    const lines = lesson.split('\n').map(line => line.trim());
+
+    const data: LessonInput = {
+      title_uz: '',
+      title_ru: '',
+      title_en: '',
+      contentType: '',
+      contentUrl: '',
+      order: 0,
+    };
+
+    lines.forEach(line => {
+      if (line.toLowerCase().startsWith('dars nomi uz:')) data.title_uz = line.split(':')[1]?.trim() || '';
+      if (line.toLowerCase().startsWith('dars nomi ru:')) data.title_ru = line.split(':')[1]?.trim() || '';
+      if (line.toLowerCase().startsWith('dars nomi en:')) data.title_en = line.split(':')[1]?.trim() || '';
+      if (line.toLowerCase().startsWith('kontent turi:')) data.contentType = line.split(':')[1]?.trim() || '';
+      if (
+        line.toLowerCase().startsWith('kontent url:') ||
+        line.toLowerCase().startsWith('kontent havolasi:')
+      ) {
+        data.contentUrl = line.split(':')[1]?.trim() || '';
       }
-      const data: LessonInput = {
-        title_uz: '',
-        title_ru: '',
-        title_en: '',
-        contentType: '',
-        contentUrl: '',
-        order: 0,
-      };
-      lines.forEach(line => {
-        if (line.startsWith('Dars nomi uz:')) data.title_uz = line.replace('Dars nomi uz:', '').trim();
-        if (line.startsWith('Dars nomi ru:')) data.title_ru = line.replace('Dars nomi ru:', '').trim();
-        if (line.startsWith('Dars nomi en:')) data.title_en = line.replace('Dars nomi en:', '').trim();
-        if (line.startsWith('Kontent turi:')) data.contentType = line.replace('Kontent turi:', '').trim();
-        if (line.startsWith('Kontent havolasi:')) data.contentUrl = line.replace('Kontent havolasi:', '').trim();
-        if (line.startsWith('Tartib:')) data.order = parseInt(line.replace('Tartib:', '').trim(), 10);
-      });
-      if (!data.title_uz || !data.title_ru || !data.title_en || !data.contentType || !data.contentUrl || isNaN(data.order)) {
-        throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
+      if (line.toLowerCase().startsWith('tartib:')) {
+        const orderStr = line.split(':')[1]?.trim();
+        data.order = orderStr ? parseInt(orderStr, 10) : 0;
       }
-      result.push(data);
+    });
+
+    if (!data.title_uz || !data.title_ru || !data.title_en || !data.contentType || !data.contentUrl || isNaN(data.order)) {
+      throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
     }
-    return result;
+
+    result.push(data);
   }
+
+  return result;
+}
 
   private parseMultipleQuizInput(input: string, language: string): QuizInput[] {
     const quizzes = input.split('\n---\n').map(item => item.trim());
@@ -662,23 +840,23 @@ export class AdminHandler {
         question_uz: '',
         question_ru: '',
         question_en: '',
-        options_uz: '',
-        options_ru: '',
-        options_en: '',
+        options_uz: [],
+        options_ru: [],
+        options_en: [],
         correctAnswer: 0,
       };
       lines.forEach(line => {
         if (line.startsWith('Savol uz:')) data.question_uz = line.replace('Savol uz:', '').trim();
         if (line.startsWith('Savol ru:')) data.question_ru = line.replace('Savol ru:', '').trim();
         if (line.startsWith('Savol en:')) data.question_en = line.replace('Savol en:', '').trim();
-        if (line.startsWith('Variantlar uz:')) data.options_uz = line.replace('Variantlar uz:', '').trim();
-        if (line.startsWith('Variantlar ru:')) data.options_ru = line.replace('Variantlar ru:', '').trim();
-        if (line.startsWith('Variantlar en:')) data.options_en = line.replace('Variantlar en:', '').trim();
-        if (line.startsWith('To‘g‘ri javob:')) data.correctAnswer = parseInt(line.replace('To‘g‘ri javob:', '').trim(), 10);
+        if (line.startsWith('Variantlar uz:')) data.options_uz = line.replace('Variantlar uz:', '').trim().split(',').map(opt => opt.trim());
+        if (line.startsWith('Variantlar ru:')) data.options_ru = line.replace('Variantlar ru:', '').trim().split(',').map(opt => opt.trim());
+        if (line.startsWith('Variantlar en:')) data.options_en = line.replace('Variantlar en:', '').trim().split(',').map(opt => opt.trim());
+        if (line.startsWith('To‘g‘ri javob:')) data.correctAnswer = parseInt(line.replace('To‘g‘ri javob:', '').trim(), 10) - 1;
       });
       if (
         !data.question_uz || !data.question_ru || !data.question_en ||
-        !data.options_uz || !data.options_ru || !data.options_en ||
+        data.options_uz.length !== 4 || data.options_ru.length !== 4 || data.options_en.length !== 4 ||
         isNaN(data.correctAnswer) || data.correctAnswer < 0 || data.correctAnswer > 3
       ) {
         throw new Error(this.i18nService.getTranslation('errors.invalid_input', language));
@@ -689,6 +867,6 @@ export class AdminHandler {
   }
 
   private escapeMarkdown(text: string): string {
-    return text.replace(/([_*[\]()~`>#+-=|{}.!])/g, '\\$1');
+    return text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
   }
 }

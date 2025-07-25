@@ -21,6 +21,6 @@ import { TelegramModule } from '../telegram/telegram.module';
   ],
   controllers: [PaymentController],
   providers: [PaymentService, InitiatePaymentHandler, VerifyPaymentHandler, PaymentHistoryHandler],
-  exports: [PaymentService],
+  exports: [PaymentService, InitiatePaymentHandler, VerifyPaymentHandler],
 })
 export class PaymentModule {}

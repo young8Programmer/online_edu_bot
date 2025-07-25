@@ -12,17 +12,37 @@ export class QuizController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<Quiz> {
-    const quiz = await this.quizService.findById(parseInt(id, 10));
-    if (!quiz) {
-      throw new Error('Quiz topilmadi');
-    }
-    return quiz;
+  async findById(@Param('id') id: string): Promise<Quiz | null> {
+    return this.quizService.findById(parseInt(id, 10));
   }
 
   @Post()
-  async create(@Body() data: { courseId: number; question: { uz: string; ru: string; en: string }; options: { uz: string[]; ru: string[]; en: string[] }; correctAnswer: number }): Promise<Quiz> {
+  async create(@Body() data: {
+    courseId: number;
+    lessonId?: number;
+    questions: Array<{
+      question: { uz: string; ru: string; en: string };
+      options: Array<{ uz: string; ru: string; en: string }>;
+      correct: number;
+    }>;
+  }): Promise<Quiz> {
     return this.quizService.createQuiz(data);
+  }
+
+  @Post(':id')
+  async update(@Param('id') id: string, @Body() data: {
+    questions?: Array<{
+      question: { uz: string; ru: string; en: string };
+      options: Array<{ uz: string; ru: string; en: string }>;
+      correct: number;
+    }>;
+  }): Promise<void> {
+    await this.quizService.updateQuiz(parseInt(id, 10), data);
+  }
+
+  @Post('submit')
+  async submit(@Body() body: { telegramId: string; quizId: number; answers: number[] }): Promise<{ score: number; total: number; explanations: string[] }> {
+    return this.quizService.submitQuiz(body.telegramId, body.quizId, body.answers);
   }
 
   @Delete(':id')

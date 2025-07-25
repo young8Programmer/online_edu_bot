@@ -17,7 +17,8 @@ export class InitiatePaymentHandler {
   async handle(query: TelegramBot.CallbackQuery, bot: TelegramBot) {
     const chatId = query.message.chat.id;
     const courseId = parseInt(query.data.split('_')[2], 10);
-    const user = await this.userService.findByTelegramId(query.from.id.toString());
+    const telegramId = BigInt(query.from.id).toString();
+    const user = await this.userService.findByTelegramId(telegramId);
     const language = user?.language && ['uz', 'ru', 'en'].includes(user.language) ? user.language : 'uz';
 
     if (!user) {
@@ -36,25 +37,16 @@ export class InitiatePaymentHandler {
       return;
     }
 
-    const payment = await this.paymentService.initiatePayment(user.telegramId, courseId, 'telegram');
-    const paymentUrl = `https://payme.uz/pay?transactionId=${payment.transactionId}`; // Payme/Click API linki bu yerda sozlanadi
-
-    await bot.sendMessage(
-      chatId,
-      this.i18nService.getTranslation('payment.initiate', language, {
-        course: course.title[language],
-        amount: payment.amount.toString(),
-        paymentUrl,
-      }),
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: this.i18nService.getTranslation('payment.verify', language), callback_data: `verify_payment_${payment.transactionId}` }],
-            [{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'list_courses' }],
-          ],
-        },
+    const payment = await this.paymentService.initiatePayment(telegramId, courseId, 'payme'); // Soxta sifatida payme
+    await bot.sendMessage(chatId, this.i18nService.getTranslation('payment.initiated', language, { link: payment.paymentLink }), {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Payme', callback_data: `pay_method_payme_${courseId}` }],
+          [{ text: 'Click', callback_data: `pay_method_click_${courseId}` }],
+          [{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'list_courses' }],
+        ],
       },
-    );
+    });
     await bot.answerCallbackQuery(query.id);
   }
 }

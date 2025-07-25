@@ -42,9 +42,11 @@ export class ViewLessonHandler {
     });
 
     await bot.sendMessage(chatId, message, {
+      parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
           [{ text: this.i18nService.getTranslation('lessons.complete', language), callback_data: `complete_lesson_${lessonId}` }],
+          [{ text: this.i18nService.getTranslation('quizzes.start', language), callback_data: `start_quiz_lesson_${lessonId}` }],
           [{ text: this.i18nService.getTranslation('lessons.back', language), callback_data: `list_lessons_${lesson.course.id}` }],
         ],
       },

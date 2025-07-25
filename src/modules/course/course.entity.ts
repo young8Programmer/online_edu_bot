@@ -1,5 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { Quiz } from '../quiz/quiz.entity';
+import { Lesson } from '../lesson/lesson.entity';
+import { User } from '../user/user.entity';
 
 @Entity()
 export class Course {
@@ -18,9 +20,19 @@ export class Course {
   @Column({ type: 'decimal', nullable: true })
   price: number;
 
+  @Column({ nullable: true })
+  category: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
-  @OneToMany(() => Quiz, (quiz) => quiz.course)
+  @OneToMany(() => Lesson, (lesson) => lesson.course, { cascade: true })
+  lessons: Lesson[];
+
+  @OneToMany(() => Quiz, (quiz) => quiz.course, { cascade: true })
   quizzes: Quiz[];
+
+  @ManyToMany(() => User, (user) => user.courses)
+  @JoinTable({ name: 'user_courses' })
+  users: User[];
 }

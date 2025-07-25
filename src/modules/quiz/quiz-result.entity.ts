@@ -7,14 +7,10 @@ export class QuizResult {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User, (user) => user.quizResults, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => User, (user) => user.quizResults, { onDelete: 'CASCADE' })
   user: User;
 
-  @ManyToOne(() => Quiz, (quiz) => quiz.quizResults, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => Quiz, (quiz) => quiz.quizResults, { onDelete: 'CASCADE' })
   quiz: Quiz;
 
   @Column()

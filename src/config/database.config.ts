@@ -16,7 +16,7 @@ export const databaseConfig = async (configService: ConfigService): Promise<Type
   port: parseInt(configService.get('DB_PORT', '5432'), 10),
   username: configService.get('DB_USERNAME', 'postgres'),
   password: configService.get('DB_PASSWORD', '1234'),
-  database: configService.get('DB_NAME', 'editbot'),
+  database: configService.get('DB_NAME', 'botbot'),
   entities: [User, Course, Lesson, Progress, Quiz, QuizResult, Certificate, Payment, Admin],
-  synchronize: configService.get('NODE_ENV', 'development') !== 'production',
+  synchronize: true,
 });

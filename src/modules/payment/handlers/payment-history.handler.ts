@@ -29,25 +29,21 @@ export class PaymentHistoryHandler {
     }
 
     const message = payments
-      .map((payment, index) => {
-        return this.i18nService.getTranslation('payment.history_item', language, {
+      .map((payment, index) =>
+        this.i18nService.getTranslation('payment.history_item', language, {
           index: (index + 1).toString(),
           course: payment.course.title[language],
           amount: payment.amount.toString(),
           status: payment.status,
           date: payment.createdAt.toLocaleDateString(),
-        });
-      })
+        }),
+      )
       .join('\n\n');
 
-    await bot.sendMessage(
-      chatId,
-      this.i18nService.getTranslation('payment.history', language) + '\n\n' + message,
-      {
-        reply_markup: {
-          inline_keyboard: [[{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'menu' }]],
-        },
+    await bot.sendMessage(chatId, this.i18nService.getTranslation('payment.history', language) + '\n\n' + message, {
+      reply_markup: {
+        inline_keyboard: [[{ text: this.i18nService.getTranslation('menu.back', language), callback_data: 'menu' }]],
       },
-    );
+    });
   }
 }

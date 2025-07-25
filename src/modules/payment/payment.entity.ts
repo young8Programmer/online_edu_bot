@@ -25,6 +25,9 @@ export class Payment {
   @Column()
   paymentMethod: string;
 
+  @Column()
+  paymentLink: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

@@ -1,34 +1,34 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { QuizService } from './quiz.service';
 import { QuizController } from './quiz.controller';
 import { Quiz } from './quiz.entity';
-import { QuizResult } from './quiz-result.entity';
 import { StartQuizHandler } from './handlers/start-quiz.handler';
 import { SubmitQuizHandler } from './handlers/submit-quiz.handler';
 import { ViewResultsHandler } from './handlers/view-result.handler';
 import { CourseModule } from '../course/course.module';
+import { LessonModule } from '../lesson/lesson.module';
 import { UserModule } from '../user/user.module';
-import { TelegramModule } from '../telegram/telegram.module';
-import { I18nModule } from '../i18n/i18n.module'; 
+import { ProgressModule } from '../progress/progress.module';
 import { CertificateModule } from '../certificate/certificate.module';
+import { I18nModule } from '../i18n/i18n.module';
+import { QuizResult } from './quiz-result.entity';
+import { TelegramModule } from '../telegram/telegram.module';
+import { GeneralQuizHandler } from './handlers/general-quiz.handler';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Quiz, QuizResult]),
-    CourseModule,
-    UserModule,
+    forwardRef(() => CourseModule),
+    forwardRef(() => LessonModule),
+    forwardRef(() => UserModule),
+    forwardRef(() => ProgressModule),
+    forwardRef(() => CertificateModule),
     forwardRef(() => TelegramModule),
-     forwardRef(() => CertificateModule),
-    I18nModule, 
+    I18nModule,
   ],
   controllers: [QuizController],
-  providers: [
-    QuizService,
-    StartQuizHandler,
-    SubmitQuizHandler,
-    ViewResultsHandler,
-  ],
-  exports: [QuizService, StartQuizHandler, SubmitQuizHandler],
+  providers: [QuizService, StartQuizHandler, SubmitQuizHandler, ViewResultsHandler, GeneralQuizHandler],
+  exports: [QuizService],
 })
 export class QuizModule {}

@@ -18,66 +18,35 @@ export class GenerateCertificateHandler {
     const chatId = query.message.chat.id;
     const courseId = parseInt(query.data.split('_')[2], 10);
     const telegramId = query.from.id.toString();
-
     const user = await this.userService.findByTelegramId(telegramId);
-    const language =
-      user?.language && ['uz', 'ru', 'en'].includes(user.language)
-        ? user.language
-        : 'uz';
+    const language = user?.language && ['uz', 'ru', 'en'].includes(user.language) ? user.language : 'uz';
 
     if (!user) {
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('errors.user_not_found', language),
-      );
+      await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.user_not_found', language));
       return;
     }
 
     const course = await this.courseService.findById(courseId);
     if (!course) {
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('errors.course_not_found', language),
-      );
+      await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.course_not_found', language));
       return;
     }
 
     try {
-      const certificateBuffer = await this.certificateService.generateCertificate(
-        telegramId,
-        courseId,
-        language,
-      );
-
+      const certificate = await this.certificateService.createCertificate(telegramId, courseId);
       await bot.sendDocument(
         chatId,
         {
-          source: certificateBuffer,
+          source: certificate.pdfBuffer,
           filename: `certificate_${courseId}.pdf`,
         },
         {
-          caption: this.i18nService.getTranslation('certificates.certificate_caption', language, {
-            title: course.title[language],
-          }),
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: this.i18nService.getTranslation('courses.back', language),
-                  callback_data: 'list_courses',
-                },
-              ],
-            ],
-          },
+          caption: this.i18nService.getTranslation('certificates.certificate_caption', language, { title: course.title[language] }),
+          reply_markup: { inline_keyboard: [[{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'list_courses' }]] },
         },
       );
-    } catch (error) {
-      await bot.sendMessage(
-        chatId,
-        this.i18nService.getTranslation('errors.certificate_generation_failed', language, {
-          reason: error.message,
-        }),
-      );
+    } catch {
+      await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.certificate_generation_failed', language));
     }
 
     await bot.answerCallbackQuery(query.id);

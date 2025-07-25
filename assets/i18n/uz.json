@@ -1,5 +1,6 @@
 {
     "menu": {
+        "welcome.message": "👋 Xush kelibsiz!",
         "courses": "🎓 Kurslar",
         "progress": "📊 Progress",
         "quiz": "📝 Test/Quiz",
@@ -8,11 +9,16 @@
         "profile": "👤 Profil",
         "language": "🌐 Tilni tanlash",
         "help": "ℹ️ Yordam",
-        "user_panel": "📋 Foydalanuvchi paneliga o‘tish"
+        "user_panel": "📋 Foydalanuvchi paneliga o‘tish",
+        "my_courses": "📚 Mening kurslarim",
+        "quizzes": "🧪 Testlar",
+        "payment_history": "📂 To‘lovlar tarixi"
     },
     "admin": {
         "panel": "🛠 Admin paneli",
         "user_stats": "📊 Foydalanuvchi statistikasi",
+        "user_payments": "💸 Foydalanuvchilar to‘lovlari",
+        "no_user_payments": "Hozircha foydalanuvchi to‘lovlari mavjud emas",
         "payment_history": "💸 To‘lovlar tarixi",
         "broadcast": "📢 Xabar yuborish",
         "user_panel": "📋 Foydalanuvchi paneli",
@@ -36,7 +42,7 @@
         "logout": "🚪 Chiqish",
         "create_course_prompt": "Iltimos, yangi kurs ma'lumotlarini quyidagi formatda yuboring:\n\nKurs nomi uz: <kurs nomi o'zbekcha>\nKurs nomi ru: <kurs nomi ruscha>\nKurs nomi en: <kurs nomi inglizcha>\nTa’rif uz: <kurs ta’rifi o'zbekcha>\nTa’rif ru: <kurs ta’rifi ruscha>\nTa’rif en: <kurs ta’rifi inglizcha>\nNarx: <kurs narxi so‘mda, agar bepul bo‘lsa 0 yozing>\n\nMasalan:\nKurs nomi uz: Matematika asoslari\nKurs nomi ru: Основы математики\nKurs nomi en: Basics of Mathematics\nTa’rif uz: Bu kurs maktab matematika asoslarini o‘rgatadi.\nTa’rif ru: Этот курс обучает основам школьной математики.\nTa’rif en: This course teaches the basics of school-level math.\nNarx: 50000",
         "create_lesson_prompt": "Iltimos, yangi dars ma'lumotlarini quyidagi formatda yuboring:\n\nDars nomi uz: <dars nomi o'zbekcha>\nDars nomi ru: <dars nomi ruscha>\nDars nomi en: <dars nomi inglizcha>\nKontent turi: <video/matn/audio>\nKontent havolasi: <havola>\nTartib: <raqam>\n\nMasalan:\nDars nomi uz: Kirish darsi\nDars nomi ru: Вводный урок\nDars nomi en: Introduction Lesson\nKontent turi: video\nKontent havolasi: https://example.com/video\nTartib: 1",
-        "create_quiz_prompt": "Iltimos, yangi test ma'lumotlarini quyidagi formatda yuboring:\n\nSavol uz: <savol o'zbekcha>\nSavol ru: <savol ruscha>\nSavol en: <savol inglizcha>\nVariantlar uz: <variant1, variant2, variant3, variant4>\nVariantlar ru: <variant1, variant2, variant3, variant4>\nVariantlar en: <variant1, variant2, variant3, variant4>\nTo‘g‘ri javob: <raqam 0-3>\n\nMasalan:\nSavol uz: 2+2 nechchi?\nSavol ru: Сколько будет 2+2?\nSavol en: What is 2+2?\nVariantlar uz: 2, 3, 4, 5\nVariantlar ru: 2, 3, 4, 5\nVariantlar en: 2, 3, 4, 5\nTo‘g‘ri javob: 2",
+        "create_quiz_prompt": "Iltimos, yangi test ma'lumotlarini quyidagi formatda yuboring:\n\nSavol uz: <savol o'zbekcha>\nSavol ru: <savol ruscha>\nSavol en: <savol inglizcha>\nVariantlar uz: <variant1, variant2, variant3, variant4>\nVariantlar ru: <variant1, variant2, variant3, variant4>\nVariantlar en: <variant1, variant2, variant3, variant4>\nTo‘g‘ri javob: <raqam 1-4>\n\nMasalan:\nSavol uz: 2+2 nechchi?\nSavol ru: Сколько будет 2+2?\nSavol en: What is 2+2?\nVariantlar uz: 2, 3, 4, 5\nVariantlar ru: 2, 3, 4, 5\nVariantlar en: 2, 3, 4, 5\nTo‘g‘ri javob: 3",
         "select_course_to_delete": "O‘chiriladigan kursni tanlang:",
         "select_course_for_lesson": "Dars yaratish uchun kursni tanlang:",
         "select_course_for_lessons": "Darslarni ko‘rish uchun kursni tanlang:",
@@ -61,7 +67,7 @@
         "lessons_created": "✅ {count} ta dars muvaffaqiyatli yaratildi: {titles}",
         "quizzes_created": "✅ {count} ta test muvaffaqiyatli yaratildi: {questions}",
         "broadcast_sent": "✅ Ommaviy xabar muvaffaqiyatli yuborildi!",
-        "correct_answer": "To‘g‘ri javob!",
+        "correct_answer": "✅ To‘g‘ri javob!",
         "notification_sent": "✅ Bildirishnoma muvaffaqiyatli yuborildi!",
         "lesson_completed": "🎉 *{title}* darsi muvaffaqiyatli yakunlandi!",
         "course_started": "🎉 *{title}* kursini boshladingiz! Birinchi darsga o‘tishingiz mumkin.",
@@ -76,7 +82,7 @@
         "lesson_not_found": "🚫 Dars topilmadi!",
         "quiz_not_found": "🚫 Test topilmadi!",
         "course_not_completed": "🚫 Kurs to‘liq yakunlanmagan!",
-        "invalid_input": "🚫 Noto‘g‘ri kiritish! Iltimos, qayta urinib ko‘ring.",
+        "invalid_input": "🚫 Noto‘g‘ri kiritish! Iltimos, ma'lumotlarni to‘g‘ri formatda kiriting.",
         "incorrect_answer": "❌ Noto‘g‘ri javob. To‘g‘ri javob: *{correctAnswer}*",
         "course_access_denied": "🚫 Sizda bu kursga kirish huquqi yo‘q. Iltimos, sotib oling.",
         "already_logged_in": "🚫 Siz allaqachon admin sifatida tizimga kirgansiz!",
@@ -84,19 +90,31 @@
         "not_logged_in": "🚫 Siz admin sifatida tizimga kirmagansiz!",
         "certificate_generation_failed": "🚫 Sertifikat yaratishda xato: {reason}",
         "no_payment_history": "💸 Sizda hali to‘lovlar yo‘q.",
-        "reset_quiz_failed": "🚫 Testlarni qayta boshlashda xato yuz berdi: {error}"
+        "reset_quiz_failed": "🚫 Testlarni qayta boshlashda xato yuz berdi: {error}",
+        "already_registered": "🚫 Siz allaqachon ro‘yxatdan o‘tgansiz!",
+        "invalid_payment": "🚫 To‘lovni tasdiqlashda xato!",
+        "max_attempts_reached": "🚫 Maksimal urinishlar soniga yetdingiz!",
+        "server_error": "🚫 Server xatosi yuz berdi. Iltimos, keyinroq qayta urinib ko‘ring.",
+        "course_fetch_error": "🚫 Kurslarni olishda xato yuz berdi!",
+        "lesson_fetch_error": "🚫 Darslarni olishda xato yuz berdi!",
+        "quiz_fetch_error": "🚫 Testlarni olishda xato yuz berdi!",
+        "user_fetch_error": "🚫 Foydalanuvchilar ma'lumotlarini olishda xato yuz berdi!",
+        "payment_fetch_error": "🚫 To‘lovlar ma'lumotlarini olishda xato yuz berdi!"
     },
     "register": {
         "phone_request": "📱 Iltimos, ro‘yxatdan o‘tish uchun telefon raqamingizni yuboring:",
         "share_phone": "📱 Telefon raqamni ulashish",
-        "email_request": "📧 Iltimos, email manzilingizni kiriting:"
+        "email_request": "📧 Iltimos, email manzilingizni kiriting:",
+        "choose_language": "🌐 Iltimos, tilni tanlang:"
     },
     "profile": {
         "info": "👤 *Profil ma’lumotlari:*\n*Ism:* {fullName}\n*Telefon:* {phoneNumber}\n*Email:* {email}\n*Til:* {language}",
-        "not_set": "O‘rnatilmagan"
+        "not_set": "O‘rnatilmagan",
+        "edit": "✏️ Tahrirlash"
     },
     "help": {
-        "message": "📚 *Botdan foydalanish bo‘yicha yordam:*\n\n- /start - Botni ishga tushirish\n- /profile - Profil ma‘lumotlarini ko‘rish\n- /language - Tilni o‘zgartirish\n- /admin - Admin paneli (adminlar uchun)\n\nℹ️ Qo‘shimcha savollar uchun admin bilan bog‘laning!"
+        "message": "📚 *Botdan foydalanish bo‘yicha yordam:*\n\n- /start - Botni ishga tushirish\n- /profile - Profil ma‘lumotlarini ko‘rish\n- /language - Tilni o‘zgartirish\n- /admin - Admin paneli (adminlar uchun)\n\nℹ️ Qo‘shimcha savollar uchun admin bilan bog‘laning!",
+        "info": "📖 Botdan foydalanish bo‘yicha qo‘llanma:\n1. Kurslarni tanlash uchun 'Kurslar' ni bosing.\n2. Pulli kurslarni sotib olish uchun 'To‘lovlar tarixi' ni tekshiring.\n3. Testlardan o‘tish uchun 60%+ natija oling.\n4. Sertifikatlar 'Sertifikatlarim' bo‘limida saqlanadi."
     },
     "stats": {
         "header": "📊 *Foydalanuvchi statistikasi*",
@@ -112,8 +130,10 @@
         "access_granted": "✅ Sizda bu kursga kirish huquqi bor",
         "access_denied": "🔒 Kursni sotib oling",
         "free": "Bepul",
+        "select_course": "Kursni tanlang:",
+        "no_accessible_courses": "Sizda kirish imkoni bo‘lgan kurslar yo‘q.",
+        "my_courses": "Mening kurslarim",
         "back": "🔙 Orqaga"
-
     },
     "lessons": {
         "no_lessons": "📖 Hozirda darslar mavjud emas.",
@@ -122,10 +142,13 @@
         "complete": "✅ Darsni yakunlash",
         "type": "Turi",
         "url": "Havola",
-        "order": "Tartib"
+        "order": "Tartib",
+        "select_course": "Darslarni ko‘rish uchun kursni tanlang:"
     },
     "quizzes": {
+        "select_course": "🎓 Kurs tanlang:",
         "no_quizzes": "📝 Hozirda testlar mavjud emas.",
+        "no_quizzes_for_course": "📝 Bu kurs uchun testlar mavjud emas.",
         "list": "📝 *Mavjud testlar:*",
         "results_list": "📊 Test natijalarini ko‘rish uchun kursni tanlang",
         "results": "📊 Natijalar:",
@@ -134,8 +157,12 @@
         "all_completed": "🎉 Siz bu kursdagi barcha testlarni yakunladingiz!",
         "next_quiz": "➡️ Keyingi test",
         "next_quiz_prompt": "Keyingi testga o‘tish uchun quyidagi variantlardan birini tanlang:",
-        "restart": "Testlarni qayta boshlash",
-        "start": "Testni boshlash"
+        "restart": "🔄 Testlarni qayta boshlash",
+        "start": "🚀 Testni boshlash",
+        "options": "Variantlar",
+        "correct": "To‘g‘ri javob",
+        "result": "Natija: {score}/{total} ({percentage}%)",
+        "retry": "🔄 Qayta topshirish"
     },
     "certificates": {
         "no_certificates": "🎖️ Sizda hali sertifikatlar yo‘q.",
@@ -143,9 +170,10 @@
         "title": "Sertifikat",
         "user": "{fullName} ushbu kursni muvaffaqiyatli tugatdi",
         "course_completed": "Quyidagi kurs bo‘yicha ta’limni yakunladi",
-        "issued": "Berilgan sana: {{date}}",
-        "certificate_caption": "{{title}} kursi uchun sertifikat",
-        "error": "Sertifikatni generatsiya qilishda xatolik yuz berdi"
+        "issued": "Berilgan sana: {date}",
+        "certificate_caption": "{title} kursi uchun sertifikat",
+        "error": "Sertifikatni generatsiya qilishda xatolik yuz berdi",
+        "info": "{index}. *Kurs*: {course}\n*Sana*: {date}"
     },
     "payment": {
         "no_payments": "💸 Sizda hali to‘lovlar yo‘q.",
@@ -155,6 +183,29 @@
         "initiate": "💳 *{course}* kursi uchun to‘lov:\nSumma: {amount} UZS\nTo‘lov havolasi: {paymentUrl}",
         "verify": "✅ To‘lovni tasdiqlash",
         "verified": "✅ To‘lov muvaffaqiyatli tasdiqlandi! *{course}* kursiga kirish huquqi ochildi.",
-        "buy": "💳 Sotib olish"
+        "buy": "💳 Sotib olish",
+        "choose_method": "To‘lov usulini tanlang:",
+        "initiated": "To‘lov yaratildi. Quyidagi havola orqali to‘lang: {link}",
+        "confirmed": "To‘lov muvaffaqiyatli tasdiqlandi!",
+        "amount": "To‘lov summasi",
+        "date": "To‘lov sanasi",
+        "status": "To‘lov holati",
+        "user": "Foydalanuvchi"
+    },
+    "welcome": {
+        "message": "Xush kelibsiz, {name}!"
+    },
+    "registration": {
+        "choose_language": "🌐 Iltimos, tilni tanlang:",
+        "phone_request": "📱 Iltimos, ro‘yxatdan o‘tish uchun telefon raqamingizni yuboring:",
+        "share_phone": "📱 Telefon raqamni ulashish",
+        "email_request": "📧 Iltimos, email manzilingizni kiriting:"
+    },
+    "progress": {
+        "info": "*Kurs*: {title}\n*Yakunlangan*: {completed}/{total} ({percentage}%)",
+        "no_progress": "📊 Hech qanday progress yo‘q!"
+    },
+    "language": {
+        "select": "🌐 Iltimos, tilni tanlang:"
     }
 }

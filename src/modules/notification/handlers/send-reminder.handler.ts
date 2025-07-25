@@ -25,13 +25,9 @@ export class SendNotificationHandler {
       return;
     }
 
-    await bot.sendMessage(
-      chatId,
-      this.i18nService.getTranslation('admin.notification_id_request', language),
-      {
-        reply_markup: { force_reply: true },
-      },
-    );
+    await bot.sendMessage(chatId, this.i18nService.getTranslation('admin.notification_id_request', language), {
+      reply_markup: { force_reply: true },
+    });
 
     bot.once('message', async (reply) => {
       if (reply.chat.id === chatId) {
@@ -42,22 +38,14 @@ export class SendNotificationHandler {
           return;
         }
 
-        await bot.sendMessage(
-          chatId,
-          this.i18nService.getTranslation('admin.notification_message_request', language),
-          {
-            reply_markup: { force_reply: true },
-          },
-        );
+        await bot.sendMessage(chatId, this.i18nService.getTranslation('admin.notification_message_request', language), {
+          reply_markup: { force_reply: true },
+        });
 
         bot.once('message', async (messageReply) => {
           if (messageReply.chat.id === chatId) {
-            try {
-              await this.notificationService.sendNotification(targetTelegramId, messageReply.text);
-              await bot.sendMessage(chatId, this.i18nService.getTranslation('success.notification_sent', language));
-            } catch (error) {
-              await bot.sendMessage(chatId, this.i18nService.getTranslation('errors.invalid_input', language));
-            }
+            await this.notificationService.sendNotification(targetTelegramId, messageReply.text);
+            await bot.sendMessage(chatId, this.i18nService.getTranslation('success.notification_sent', language));
           }
         });
       }

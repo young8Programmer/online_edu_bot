@@ -9,6 +9,9 @@ import { StartCourseHandler } from './handlers/start-course.handler';
 import { UserModule } from '../user/user.module';
 import { I18nModule } from '../i18n/i18n.module';
 import { PaymentModule } from '../payment/payment.module';
+import { TelegramModule } from '../telegram/telegram.module';
+import { AuthModule } from '../auth/auth.module';
+import { LessonModule } from '../lesson/lesson.module';
 
 @Module({
   imports: [
@@ -16,9 +19,12 @@ import { PaymentModule } from '../payment/payment.module';
     forwardRef(() => UserModule),
     forwardRef(() => PaymentModule),
     I18nModule,
+    forwardRef(() => TelegramModule),
+    forwardRef(() => AuthModule),
+    forwardRef(() => LessonModule),
   ],
   controllers: [CourseController],
   providers: [CourseService, ListCoursesHandler, CourseInfoHandler, StartCourseHandler],
-  exports: [CourseService],
+  exports: [CourseService, StartCourseHandler],
 })
 export class CourseModule {}

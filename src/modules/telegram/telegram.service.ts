@@ -1,11 +1,11 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as TelegramBot from 'node-telegram-bot-api';
+import { ModuleRef } from '@nestjs/core';
+import { telegramConfig } from '../../config/telegram.config';
 import { I18nService } from '../i18n/i18n.service';
 import { UserService } from '../user/user.service';
 import { AuthService } from '../auth/auth.service';
-import { ModuleRef } from '@nestjs/core';
-import { telegramConfig } from '../../config/telegram.config';
 import { StartHandler } from './handlers/start.handler';
 import { HelpHandler } from './handlers/help.handler';
 import { AdminHandler } from './handlers/admin.handler';
@@ -22,7 +22,6 @@ import { PaymentHistoryHandler } from '../payment/handlers/payment-history.handl
 @Injectable()
 export class TelegramService implements OnModuleInit {
   private bot: TelegramBot;
-  private readonly logger = new Logger(TelegramService.name);
 
   constructor(
     private readonly configService: ConfigService,
@@ -30,322 +29,316 @@ export class TelegramService implements OnModuleInit {
     private readonly userService: UserService,
     private readonly authService: AuthService,
     private readonly moduleRef: ModuleRef,
+    @Inject('FORCED_USER_PANEL_MAP')
+    private forcedUserPanelMap: Map<string, boolean>,
   ) {}
 
   async onModuleInit() {
-    try {
-      const config = telegramConfig(this.configService);
-      this.bot = new TelegramBot(config.botToken, { polling: true });
-      this.logger.log(`Telegram bot initialized with token: ${config.botToken.slice(0, 5)}...`);
+    const config = telegramConfig(this.configService);
+    this.bot = new TelegramBot(config.botToken, { polling: true });
 
-      const startHandler = this.moduleRef.get(StartHandler, { strict: false });
-      const helpHandler = this.moduleRef.get(HelpHandler, { strict: false });
-      const adminHandler = this.moduleRef.get(AdminHandler, { strict: false });
-      const callbackHandler = this.moduleRef.get(CallbackHandler, { strict: false });
-      const registerHandler = this.moduleRef.get(RegisterHandler, { strict: false });
-      const languageHandler = this.moduleRef.get(LanguageHandler, { strict: false });
-      const profileHandler = this.moduleRef.get(ProfileHandler, { strict: false });
-      const listCoursesHandler = this.moduleRef.get(ListCoursesHandler, { strict: false });
-      const viewProgressHandler = this.moduleRef.get(ViewProgressHandler, { strict: false });
-      const startQuizHandler = this.moduleRef.get(StartQuizHandler, { strict: false });
-      const viewCertificatesHandler = this.moduleRef.get(ViewCertificatesHandler, { strict: false });
-      const paymentHistoryHandler = this.moduleRef.get(PaymentHistoryHandler, { strict: false });
+    const startHandler = this.moduleRef.get(StartHandler, { strict: false });
+    const helpHandler = this.moduleRef.get(HelpHandler, { strict: false });
+    const adminHandler = this.moduleRef.get(AdminHandler, { strict: false });
+    const callbackHandler = this.moduleRef.get(CallbackHandler, { strict: false });
+    const registerHandler = this.moduleRef.get(RegisterHandler, { strict: false });
+    const languageHandler = this.moduleRef.get(LanguageHandler, { strict: false });
+    const profileHandler = this.moduleRef.get(ProfileHandler, { strict: false });
+    const listCoursesHandler = this.moduleRef.get(ListCoursesHandler, { strict: false });
+    const viewProgressHandler = this.moduleRef.get(ViewProgressHandler, { strict: false });
+    const startQuizHandler = this.moduleRef.get(StartQuizHandler, { strict: false });
+    const viewCertificatesHandler = this.moduleRef.get(ViewCertificatesHandler, { strict: false });
+    const paymentHistoryHandler = this.moduleRef.get(PaymentHistoryHandler, { strict: false });
 
-      // Buyruqlar
-      this.bot.onText(/\/start/, (msg) => {
-        this.logger.log(`Received /start command from telegramId: ${msg.from.id}`);
-        startHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/\/help/, (msg) => {
-        this.logger.log(`Received /help command from telegramId: ${msg.from.id}`);
-        helpHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/\/admin/, (msg) => {
-        this.logger.log(`Received /admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/\/register/, (msg) => {
-        this.logger.log(`Received /register command from telegramId: ${msg.from.id}`);
-        registerHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/\/profile/, (msg) => {
-        this.logger.log(`Received /profile command from telegramId: ${msg.from.id}`);
-        profileHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/\/language/, (msg) => {
-        this.logger.log(`Received /language command from telegramId: ${msg.from.id}`);
-        languageHandler.handle(msg, this.bot);
-      });
+    this.bot.onText(/^\/start$/, async (msg) => {
+      const telegramId = BigInt(msg.from.id).toString();
+      const user = await this.userService.findByTelegramId(telegramId);
+      const language = user?.language || 'uz';
+      const message = this.i18nService.getTranslation('welcome.message', language);
+      await this.sendMessageWithMenu(msg.chat.id, message, language, telegramId);
+    });
 
-      // Menyu tugmalari
-      this.bot.onText(/🌐 Tilni tanlash|🌐 Смена языка|🌐 Change language/, (msg) => {
-        this.logger.log(`Received language menu command from telegramId: ${msg.from.id}, text: ${msg.text}`);
-        languageHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/👤 Profil|👤 Профиль|👤 Profile/, (msg) => {
-        this.logger.log(`Received profile menu command from telegramId: ${msg.from.id}`);
-        profileHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/🎓 Kurslar|🎓 Курсы|🎓 Courses/, (msg) => {
-        this.logger.log(`Received courses menu command from telegramId: ${msg.from.id}`);
-        listCoursesHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/📊 Progress|📊 Прогресс|📊 Progress/, (msg) => {
-        this.logger.log(`Received progress menu command from telegramId: ${msg.from.id}`);
-        viewProgressHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/📝 Test\/Quiz|📝 Тест\/Квиз|📝 Test\/Quiz/, (msg) => {
-        this.logger.log(`Received quiz menu command from telegramId: ${msg.from.id}`);
-        startQuizHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/🎖️ Sertifikatlar|🎖️ Сертификаты|🎖️ Certificates/, (msg) => {
-        this.logger.log(`Received certificates menu command from telegramId: ${msg.from.id}`);
-        viewCertificatesHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/💳 To‘lov|💳 Оплата|💳 Payment/, (msg) => {
-        this.logger.log(`Received payment menu command from telegramId: ${msg.from.id}`);
-        paymentHistoryHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/ℹ️ Yordam|ℹ️ Помощь|ℹ️ Help/, (msg) => {
-        this.logger.log(`Received help menu command from telegramId: ${msg.from.id}`);
-        helpHandler.handle(msg, this.bot);
-      });
+    this.bot.onText(/^\/help$/, async (msg) => {
+      await helpHandler.handle(msg, this.bot);
+    });
 
-      // Admin tugmalari
-      this.bot.onText(/📊 Foydalanuvchi statistikasi|📊 Статистика пользователей|📊 User stats/, (msg) => {
-        this.logger.log(`Received user stats admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/💸 To‘lovlar tarixi|💸 История платежей|💸 Payment history/, (msg) => {
-        this.logger.log(`Received payment history admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/📢 Xabar yuborish|📢 Отправить сообщение|📢 Send broadcast/, (msg) => {
-        this.logger.log(`Received broadcast admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/📋 Foydalanuvchi paneli|📋 Пользовательская панель|📋 User panel/, (msg) => {
-        this.logger.log(`Received user panel admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/📚 Kurslarni boshqarish|📚 Управление курсами|📚 Manage courses/, (msg) => {
-        this.logger.log(`Received manage courses admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/📖 Darslarni boshqarish|📖 Управление уроками|📖 Manage lessons/, (msg) => {
-        this.logger.log(`Received manage lessons admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/📝 Testlarni boshqarish|📝 Управление тестами|📝 Manage quizzes/, (msg) => {
-        this.logger.log(`Received manage quizzes admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/➕ Kurs yaratish|➕ Создать курс|➕ Create course/, (msg) => {
-        this.logger.log(`Received create course admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/🔍 Kurslarni ko‘rish|🔍 Посмотреть курсы|🔍 View courses/, (msg) => {
-        this.logger.log(`Received view courses admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/🗑 Kursni o‘chirish|🗑 Удалить курс|🗑 Delete course/, (msg) => {
-        this.logger.log(`Received delete course admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/➕ Dars yaratish|➕ Создать урок|➕ Create lesson/, (msg) => {
-        this.logger.log(`Received create lesson admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/🔍 Darslarni ko‘rish|🔍 Посмотреть уроки|🔍 View lessons/, (msg) => {
-        this.logger.log(`Received view lessons admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/🗑 Darsni o‘chirish|🗑 Удалить урок|🗑 Delete lesson/, (msg) => {
-        this.logger.log(`Received delete lesson admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/➕ Test yaratish|➕ Создать тест|➕ Create quiz/, (msg) => {
-        this.logger.log(`Received create quiz admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/🔍 Testlarni ko‘rish|🔍 Посмотреть тесты|🔍 View quizzes/, (msg) => {
-        this.logger.log(`Received view quizzes admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/🗑 Testni o‘chirish|🗑 Удалить тест|🗑 Delete quiz/, (msg) => {
-        this.logger.log(`Received delete quiz admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
-      this.bot.onText(/🔙 Orqaga|🔙 Назад|🔙 Back/, (msg) => {
-        this.logger.log(`Received back admin command from telegramId: ${msg.from.id}`);
-        adminHandler.handle(msg, this.bot);
-      });
+    this.bot.onText(/^\/register$/, async (msg) => {
+      await registerHandler.handle(msg, this.bot);
+    });
 
-      // Callback query hodisasi
-      this.bot.on('callback_query', (query) => {
-        this.logger.log(`Received callback_query: queryId=${query.id}, from=${query.from.id}, data=${query.data}, chatId=${query.message?.chat.id}`);
-        callbackHandler.handle(query, this.bot);
-      });
+    this.bot.onText(/^\/language$/, async (msg) => {
+      await languageHandler.handle(msg, this.bot);
+    });
 
-      this.bot.on('contact', (msg) => {
-        this.logger.log(`Received contact from telegramId: ${msg.from.id}`);
-        registerHandler.handle(msg, this.bot);
-      });
+    this.bot.onText(/^\/profile$/, async (msg) => {
+      await profileHandler.handle(msg, this.bot);
+    });
 
-      this.bot.on('message', async (msg) => {
-        this.logger.log(`Received message from telegramId: ${msg.from.id}, text: ${msg.text}`);
-        const user = await this.userService.findByTelegramId(msg.from.id.toString());
-        const language = user?.language || 'uz';
-        if (msg.text && !msg.contact && !msg.text.startsWith('/') && !this.isMenuCommand(msg.text, language)) {
-          this.logger.log(`Forwarding non-command message to RegisterHandler: ${msg.text}`);
-          await registerHandler.handle(msg, this.bot);
-        }
-      });
+    this.bot.onText(/^\/admin$/, async (msg) => {
+      const telegramId = BigInt(msg.from.id).toString();
+      const isAdmin = await this.authService.isAdmin(telegramId);
+      const user = await this.userService.findByTelegramId(telegramId);
+      const language = user?.language || 'uz';
+      if (isAdmin) {
+        const message = this.i18nService.getTranslation('admin.panel', language);
+        await this.sendMessageWithAdminMenu(msg.chat.id, message, language);
+      } else {
+        const message = this.i18nService.getTranslation('errors.access_denied', language);
+        await this.sendMessageWithMenu(msg.chat.id, message, language, telegramId);
+      }
+    });
 
-      this.bot.on('polling_error', (error) => {
-        this.logger.error(`Polling error: ${error.message}, stack: ${error.stack}`);
-      });
+    this.bot.onText(/🌐/, async (msg) => {
+      await languageHandler.handle(msg, this.bot);
+    });
 
-      this.logger.log('TelegramService fully initialized');
-    } catch (error) {
-      this.logger.error(`Error in onModuleInit: ${error.message}, stack: ${error.stack}`);
-      throw error;
-    }
+    this.bot.onText(/👤/, async (msg) => {
+      await profileHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/🎓 Kurslar|My courses/, async (msg) => {
+      await listCoursesHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/📚 Mening kurslarim/, async (msg) => {
+      await listCoursesHandler.handle({ ...msg, text: '/my_courses' }, this.bot);
+    });
+
+    this.bot.onText(/📊/, async (msg) => {
+      await viewProgressHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/🧪 Testlar|Quizzes/, async (msg) => {
+      await startQuizHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/🎖️/, async (msg) => {
+      await viewCertificatesHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/📂 To‘lovlar tarixi|Payment history/, async (msg) => {
+      await paymentHistoryHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/ℹ️/, async (msg) => {
+      await helpHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/📋/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/📊 Foydalanuvchi statistikasi/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/💸 Foydalanuvchilar to‘lovlari/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/📢/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/📚/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/📖/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/📝 Testlarni boshqarish/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/➕/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/🔍 Testlarni ko‘rish/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/🗑/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/Kurslarni ko‘rish|View courses|Курсы/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/Darslarni ko‘rish|View lessons|Уроки/, async (msg) => {
+      await adminHandler.handle(msg, this.bot);
+    });
+
+    this.bot.onText(/^Orqaga$|^Back$|^Назад$|^🔙 Orqaga$|^🔙 Back$|^🔙 Назад$/, async (msg) => {
+      const telegramId = BigInt(msg.from.id).toString();
+      const user = await this.userService.findByTelegramId(telegramId);
+      const language = user?.language || 'uz';
+      const isAdmin = await this.authService.isAdmin(telegramId);
+      if (isAdmin) {
+        const message = this.i18nService.getTranslation('admin.panel', language);
+        await this.sendMessageWithAdminMenu(msg.chat.id, message, language);
+      } else {
+        const message = this.i18nService.getTranslation('welcome.message', language);
+        await this.sendMessageWithMenu(msg.chat.id, message, language, telegramId);
+      }
+    });
+
+    this.bot.on('callback_query', async (query) => {
+      await callbackHandler.handle(query, this.bot);
+    });
+
+    this.bot.on('contact', async (msg) => {
+      await registerHandler.handle(msg, this.bot);
+    });
+
+    this.bot.on('message', async (msg) => {
+      const telegramId = BigInt(msg.from.id).toString();
+      const user = await this.userService.findByTelegramId(telegramId);
+      const language = user?.language || 'uz';
+      if (msg.text && !msg.contact && !msg.text.startsWith('/') && !this.isMenuCommand(msg.text, language)) {
+        await registerHandler.handle(msg, this.bot);
+      }
+    });
   }
 
   private isMenuCommand(text: string, language: string): boolean {
-    const menuCommands = [
-      this.i18nService.getTranslation('menu.courses', language),
-      this.i18nService.getTranslation('menu.progress', language),
-      this.i18nService.getTranslation('menu.quiz', language),
-      this.i18nService.getTranslation('menu.certificates', language),
-      this.i18nService.getTranslation('menu.payment', language),
-      this.i18nService.getTranslation('menu.profile', language),
-      this.i18nService.getTranslation('menu.language', language),
-      this.i18nService.getTranslation('menu.help', language),
-      this.i18nService.getTranslation('admin.user_stats', language),
-      this.i18nService.getTranslation('admin.payment_history', language),
-      this.i18nService.getTranslation('admin.broadcast', language),
-      this.i18nService.getTranslation('admin.user_panel', language),
-      this.i18nService.getTranslation('admin.manage_courses', language),
-      this.i18nService.getTranslation('admin.manage_lessons', language),
-      this.i18nService.getTranslation('admin.manage_quizzes', language),
-      this.i18nService.getTranslation('admin.create_course', language),
-      this.i18nService.getTranslation('admin.view_courses', language),
-      this.i18nService.getTranslation('admin.delete_course', language),
-      this.i18nService.getTranslation('admin.create_lesson', language),
-      this.i18nService.getTranslation('admin.view_lessons', language),
-      this.i18nService.getTranslation('admin.delete_lesson', language),
-      this.i18nService.getTranslation('admin.create_quiz', language),
-      this.i18nService.getTranslation('admin.view_quizzes', language),
-      this.i18nService.getTranslation('admin.delete_quiz', language),
-      this.i18nService.getTranslation('admin.back', language),
+    const keys = [
+      'menu.courses', 'menu.my_courses', 'menu.progress', 'menu.quizzes',
+      'menu.certificates', 'menu.payment_history', 'menu.profile', 'menu.language',
+      'menu.help', 'menu.back',
+      'admin.user_stats', 'admin.user_payments', 'admin.broadcast',
+      'admin.user_panel', 'admin.manage_courses', 'admin.manage_lessons',
+      'admin.manage_quizzes', 'admin.create_course', 'admin.view_courses',
+      'admin.delete_course', 'admin.create_lesson', 'admin.view_lessons',
+      'admin.delete_lesson', 'admin.create_quiz', 'admin.view_quizzes',
+      'admin.delete_quiz', 'admin.back',
     ];
-    const isCommand = menuCommands.includes(text);
-    this.logger.log(`Checking if text is menu command: text=${text}, language=${language}, isCommand=${isCommand}`);
-    return isCommand;
+    return keys.some((key) => this.i18nService.getTranslation(key, language) === text);
   }
 
-  async sendMessage(chatId: number, message: string, options?: any): Promise<void> {
-    try {
-      await this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...options });
-      this.logger.log(`Message sent to ${chatId}: ${message}`);
-    } catch (error) {
-      this.logger.error(`Error sending message to ${chatId}: ${error.message}, stack: ${error.stack}`);
-      throw error;
-    }
+  async sendMessage(chatId: number, message: string, options?: TelegramBot.SendMessageOptions): Promise<void> {
+    await this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...options });
   }
 
-  async sendMessageWithMenu(chatId: number, message: string, language: string, telegramId: string): Promise<void> {
-    try {
-      const isAdmin = await this.authService.isAdmin(telegramId);
-      const isAdminMode = await this.authService.isAdminMode(telegramId);
-
-      if (isAdmin && isAdminMode) {
-        await this.sendMessageWithAdminMenu(chatId, message, language);
-      } else {
-        await this.bot.sendMessage(chatId, message, {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            keyboard: [
-              [
-                { text: this.i18nService.getTranslation('menu.courses', language) },
-                { text: this.i18nService.getTranslation('menu.progress', language) },
-              ],
-              [
-                { text: this.i18nService.getTranslation('menu.quiz', language) },
-                { text: this.i18nService.getTranslation('menu.certificates', language) },
-              ],
-              [
-                { text: this.i18nService.getTranslation('menu.payment', language) },
-                { text: this.i18nService.getTranslation('menu.profile', language) },
-              ],
-              [
-                { text: this.i18nService.getTranslation('menu.language', language) },
-                { text: this.i18nService.getTranslation('menu.help', language) },
-              ],
-            ],
-            resize_keyboard: true,
-            persistent: true,
-          },
-        });
-        this.logger.log(`Message with user menu sent to ${chatId}: ${message}`);
-      }
-    } catch (error) {
-      this.logger.error(`Error sending message with menu to ${chatId}: ${error.message}, stack: ${error.stack}`);
-      throw error;
-    }
+  async sendMessageWithMenu(
+  chatId: number,
+  message: string,
+  language: string,
+  telegramId: string,
+  forceUserPanel = false,
+  user?: any // Foydalanuvchi ma'lumotlarini qabul qilish uchun
+): Promise<void> {
+  const isAdmin = await this.authService.isAdmin(telegramId);
+  if (forceUserPanel) {
+    this.forcedUserPanelMap.set(String(chatId), true);
   }
+  if (message === '/admin') {
+    this.forcedUserPanelMap.delete(String(chatId));
+  }
+  const hasForcedUserPanel = this.forcedUserPanelMap.get(String(chatId));
+
+  // Xabarni moslashtirish
+  const finalMessage = user ? message.replace('{name}', user.fullName || 'Foydalanuvchi') : message;
+
+  if (isAdmin && !hasForcedUserPanel) {
+    await this.sendMessageWithAdminMenu(chatId, finalMessage, language);
+  } else {
+    await this.bot.sendMessage(chatId, finalMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        keyboard: [
+          [
+            { text: this.i18nService.getTranslation('menu.courses', language) },
+            { text: this.i18nService.getTranslation('menu.my_courses', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('menu.progress', language) },
+            { text: this.i18nService.getTranslation('menu.quizzes', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('menu.certificates', language) },
+            { text: this.i18nService.getTranslation('menu.payment_history', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('menu.profile', language) },
+            { text: this.i18nService.getTranslation('menu.language', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('menu.help', language) },
+          ],
+        ],
+        resize_keyboard: true,
+        persistent: true,
+      },
+    });
+  }
+}
 
   async sendMessageWithAdminMenu(chatId: number, message: string, language: string): Promise<void> {
-    try {
-      await this.bot.sendMessage(chatId, message, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          keyboard: [
-            [
-              { text: this.i18nService.getTranslation('admin.user_stats', language) },
-              { text: this.i18nService.getTranslation('admin.payment_history', language) },
-            ],
-            [
-              { text: this.i18nService.getTranslation('admin.broadcast', language) },
-              { text: this.i18nService.getTranslation('admin.user_panel', language) },
-            ],
-            [
-              { text: this.i18nService.getTranslation('admin.manage_courses', language) },
-              { text: this.i18nService.getTranslation('admin.manage_lessons', language) },
-            ],
-            [
-              { text: this.i18nService.getTranslation('admin.manage_quizzes', language) },
-              { text: this.i18nService.getTranslation('menu.profile', language) },
-            ],
-            [
-              { text: this.i18nService.getTranslation('menu.language', language) },
-              { text: this.i18nService.getTranslation('menu.help', language) },
-            ],
+    await this.bot.sendMessage(chatId, message, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        keyboard: [
+          [
+            { text: this.i18nService.getTranslation('admin.user_stats', language) },
+            { text: this.i18nService.getTranslation('admin.user_payments', language) },
           ],
-          resize_keyboard: true,
-          persistent: true,
-        },
-      });
-      this.logger.log(`Message with admin menu sent to ${chatId}: ${message}`);
-    } catch (error) {
-      this.logger.error(`Error sending message with admin menu to ${chatId}: ${error.message}, stack: ${error.stack}`);
-      throw error;
-    }
+          [
+            { text: this.i18nService.getTranslation('admin.broadcast', language) },
+            { text: this.i18nService.getTranslation('admin.user_panel', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('admin.manage_courses', language) },
+            { text: this.i18nService.getTranslation('admin.manage_lessons', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('admin.manage_quizzes', language) },
+            { text: this.i18nService.getTranslation('menu.profile', language) },
+          ],
+          [
+            { text: this.i18nService.getTranslation('menu.language', language) },
+            { text: this.i18nService.getTranslation('menu.help', language) },
+          ],
+        ],
+        resize_keyboard: true,
+        persistent: true,
+      },
+    });
+  }
+
+  async requestContact(chatId: number, telegramId: string) {
+    await this.bot.sendMessage(chatId, this.i18nService.getTranslation('register.phone_request', 'uz'), {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        keyboard: [
+          [{ text: this.i18nService.getTranslation('register.share_phone', 'uz'), request_contact: true }],
+        ],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
+    });
   }
 
   async sendSticker(chatId: number, sticker: string) {
-    try {
-      await this.bot.sendSticker(chatId, sticker);
-      this.logger.log(`Sticker sent to ${chatId}`);
-    } catch (error) {
-      this.logger.error(`Error sending sticker to ${chatId}: ${error.message}, stack: ${error.stack}`);
-      throw error;
-    }
+    await this.bot.sendSticker(chatId, sticker);
   }
 
   getBot(): TelegramBot {
     return this.bot;
+  }
+
+  setForceUserPanel(chatId: string, value: boolean): void {
+    this.forcedUserPanelMap.set(chatId, value);
+  }
+
+  unsetForceUserPanel(chatId: string): void {
+    this.forcedUserPanelMap.delete(chatId);
+  }
+
+  isUserPanelForced(chatId: string): boolean {
+    return this.forcedUserPanelMap.get(chatId) ?? false;
   }
 }

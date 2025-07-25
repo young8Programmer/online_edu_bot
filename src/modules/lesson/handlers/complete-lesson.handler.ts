@@ -38,18 +38,14 @@ export class CompleteLessonHandler {
     }
 
     await this.progressService.updateProgress(user.telegramId, lessonId);
-
-    await bot.sendMessage(
-      chatId,
-      this.i18nService.getTranslation('success.lesson_completed', language, {
-        title: lesson.title[language],
-      }),
-      {
-        reply_markup: {
-          inline_keyboard: [[{ text: this.i18nService.getTranslation('lessons.back', language), callback_data: `list_lessons_${lesson.course.id}` }]],
-        },
+    await bot.sendMessage(chatId, this.i18nService.getTranslation('success.lesson_completed', language, { title: lesson.title[language] }), {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: this.i18nService.getTranslation('quizzes.start', language), callback_data: `start_quiz_lesson_${lessonId}` }],
+          [{ text: this.i18nService.getTranslation('lessons.back', language), callback_data: `list_lessons_${lesson.course.id}` }],
+        ],
       },
-    );
+    });
     await bot.answerCallbackQuery(query.id);
   }
 }

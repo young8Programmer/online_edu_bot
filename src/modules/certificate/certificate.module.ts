@@ -24,6 +24,7 @@ import { QuizModule } from '../quiz/quiz.module';
   ],
   controllers: [CertificateController],
   providers: [CertificateService, GenerateCertificateHandler, ViewCertificatesHandler],
-  exports: [CertificateService],
+  exports: [CertificateService, ViewCertificatesHandler],
 })
 export class CertificateModule {}
+
