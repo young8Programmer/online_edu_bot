@@ -31,10 +31,14 @@ export class RegisterHandler {
             fullName: msg.from.first_name + (msg.from.last_name ? ' ' + msg.from.last_name : ''),
             phoneNumber: msg.contact.phone_number,
             language: defaultLanguage,
+            state: 'awaiting_email',
           });
 
-          const message = this.i18nService.getTranslation('register.email_request', defaultLanguage);
-          await this.telegramService.sendMessage(chatId, message, {
+          const message =
+            this.i18nService.getTranslation('register.email_request', defaultLanguage) ||
+            'Iltimos, email manzilingizni kiriting:';
+          await this.telegramService.sendMessage(chatId, this.escapeMarkdown(message), {
+            parse_mode: 'MarkdownV2',
             reply_markup: {
               force_reply: true,
             },
@@ -43,10 +47,17 @@ export class RegisterHandler {
         }
 
         this.logger.log(`Prompting phone number for telegramId: ${telegramId}`);
-        const message = this.i18nService.getTranslation('register.phone_request', defaultLanguage);
-        await this.telegramService.sendMessage(chatId, message, {
+        const message =
+          this.i18nService.getTranslation('register.phone_request', defaultLanguage) ||
+          'Iltimos, telefon raqamingizni yuboring';
+        await this.telegramService.sendMessage(chatId, this.escapeMarkdown(message), {
+          parse_mode: 'MarkdownV2',
           reply_markup: {
-            keyboard: [[{ text: this.i18nService.getTranslation('register.share_phone', defaultLanguage), request_contact: true }]],
+            keyboard: [[{
+              text: this.i18nService.getTranslation('register.share_phone', defaultLanguage) ||
+                '📱 Telefon raqamni yuborish',
+              request_contact: true
+            }]],
             resize_keyboard: true,
             one_time_keyboard: true,
             persistent: true,
@@ -57,10 +68,16 @@ export class RegisterHandler {
 
       if (!user.phoneNumber && msg.contact) {
         this.logger.log(`Updating phone number for telegramId: ${telegramId}, phone: ${msg.contact.phone_number}`);
-        await this.userService.updateUser(telegramId, { phoneNumber: msg.contact.phone_number });
+        await this.userService.updateUser(telegramId, {
+          phoneNumber: msg.contact.phone_number,
+          state: 'awaiting_email',
+        });
 
-        const message = this.i18nService.getTranslation('register.email_request', user.language || defaultLanguage);
-        await this.telegramService.sendMessage(chatId, message, {
+        const message =
+          this.i18nService.getTranslation('register.email_request', user.language || defaultLanguage) ||
+          'Iltimos, email manzilingizni kiriting:';
+        await this.telegramService.sendMessage(chatId, this.escapeMarkdown(message), {
+          parse_mode: 'MarkdownV2',
           reply_markup: {
             force_reply: true,
           },
@@ -72,8 +89,11 @@ export class RegisterHandler {
         const email = msg.text.trim();
         if (!this.isValidEmail(email)) {
           this.logger.warn(`Invalid email format for telegramId: ${telegramId}, email: ${email}`);
-          const message = this.i18nService.getTranslation('errors.invalid_email', user.language || defaultLanguage);
-          await this.telegramService.sendMessage(chatId, message, {
+          const message =
+            this.i18nService.getTranslation('errors.invalid_email', user.language || defaultLanguage) ||
+            'Email formati noto‘g‘ri, qayta kiriting.';
+          await this.telegramService.sendMessage(chatId, this.escapeMarkdown(message), {
+            parse_mode: 'MarkdownV2',
             reply_markup: {
               force_reply: true,
             },
@@ -82,23 +102,35 @@ export class RegisterHandler {
         }
 
         this.logger.log(`Updating email for telegramId: ${telegramId}, email: ${email}`);
-        await this.userService.updateUser(telegramId, { email });
+        await this.userService.updateUser(telegramId, {
+          email,
+          state: 'registered',
+        });
 
-        const message = this.i18nService.getTranslation('success.registered', user.language || defaultLanguage);
-        await this.telegramService.sendMessageWithMenu(chatId, message, user.language || defaultLanguage, telegramId);
+        const message =
+          this.i18nService.getTranslation('success.registered', user.language || defaultLanguage) ||
+          '✅ Ro‘yxatdan o‘tish muvaffaqiyatli yakunlandi!';
+        await this.telegramService.sendMessageWithMenu(chatId, this.escapeMarkdown(message), user.language || defaultLanguage, telegramId);
         return;
       }
 
       this.logger.log(`User ${telegramId} already registered, ignoring message`);
     } catch (error) {
       this.logger.error(`Error handling registration for telegramId: ${telegramId}, ${error.message}`);
-      const message = this.i18nService.getTranslation('errors.user_not_found', defaultLanguage);
-      await this.telegramService.sendMessageWithMenu(chatId, message, defaultLanguage, telegramId);
+      const message =
+        this.i18nService.getTranslation('errors.user_not_found', defaultLanguage) ||
+        'Foydalanuvchi topilmadi, qayta urinib ko‘ring.';
+      await this.telegramService.sendMessageWithMenu(chatId, this.escapeMarkdown(message), defaultLanguage, telegramId);
     }
   }
 
   private isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  }
+
+  private escapeMarkdown(text: string): string {
+    // Faqat MarkdownV2 maxsus belgilarini escape qiladi
+    return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
   }
 }

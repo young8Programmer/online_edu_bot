@@ -30,6 +30,7 @@ import { ProgressModule } from '../progress/progress.module';
 import { CompleteLessonHandler } from '../lesson/handlers/complete-lesson.handler';
 import { GeneralQuizHandler } from '../quiz/handlers/general-quiz.handler';
 import { StartCourseHandler } from '../course/handlers/start-course.handler';
+import { MixedQuizHandler } from '../quiz/handlers/mixed-quiz.handler';
 
 // 🟩 Bu yerda Map ni provider qilamiz
 const ForcedUserPanelMapProvider = {
@@ -72,6 +73,7 @@ const ForcedUserPanelMapProvider = {
     CompleteLessonHandler,
     GeneralQuizHandler,
     StartQuizHandler,
+    MixedQuizHandler,
     StartCourseHandler,
     ForcedUserPanelMapProvider, // 🟢 Provider qo‘shildi
   ],

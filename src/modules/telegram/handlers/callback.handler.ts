@@ -1,52 +1,50 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { TelegramService } from '../telegram.service';
+import { TelegramService } from '../../telegram/telegram.service';
 import { UserService } from '../../user/user.service';
 import { I18nService } from '../../i18n/i18n.service';
 import { StartQuizHandler } from '../../quiz/handlers/start-quiz.handler';
 import { GeneralQuizHandler } from '../../quiz/handlers/general-quiz.handler';
+import { MixedQuizHandler } from '../../quiz/handlers/mixed-quiz.handler';
 import { AdminHandler } from './admin.handler';
 import { ListCoursesHandler } from '../../course/handlers/list-course.handler';
 import { CourseInfoHandler } from '../../course/handlers/course-info.handler';
 import { StartCourseHandler } from '../../course/handlers/start-course.handler';
 import { VerifyPaymentHandler } from '../../payment/handlers/verify-payment.handler';
 import * as TelegramBot from 'node-telegram-bot-api';
+import { AuthService } from '../../auth/auth.service';
 
 @Injectable()
 export class CallbackHandler {
   constructor(
-    @Inject(forwardRef(() => TelegramService))
-    private readonly telegramService: TelegramService,
+    
+        @Inject(forwardRef(() => TelegramService))
+        private readonly telegramService: TelegramService,
     private readonly userService: UserService,
     private readonly i18nService: I18nService,
-    @Inject(forwardRef(() => StartQuizHandler))
+    private readonly authService: AuthService,
     private readonly startQuizHandler: StartQuizHandler,
-    @Inject(forwardRef(() => GeneralQuizHandler))
     private readonly generalQuizHandler: GeneralQuizHandler,
-    @Inject(forwardRef(() => AdminHandler))
+    private readonly mixedQuizHandler: MixedQuizHandler,
     private readonly adminHandler: AdminHandler,
-    @Inject(forwardRef(() => ListCoursesHandler))
     private readonly listCoursesHandler: ListCoursesHandler,
-    @Inject(forwardRef(() => CourseInfoHandler))
     private readonly courseInfoHandler: CourseInfoHandler,
-    @Inject(forwardRef(() => StartCourseHandler))
     private readonly startCourseHandler: StartCourseHandler,
-    @Inject(forwardRef(() => VerifyPaymentHandler))
     private readonly verifyPaymentHandler: VerifyPaymentHandler,
   ) {}
 
-  async handle(query: TelegramBot.CallbackQuery, bot: TelegramBot) {
-    const chatId = query.message?.chat.id;
+  async handle(query: TelegramBot.CallbackQuery, bot: TelegramBot, sendMessageWithAdminMenu: (chatId: number, message: string, language: string) => Promise<void>, sendMessageWithMenu: (chatId: number, message: string, language: string, telegramId: string, forceUserPanel?: boolean, user?: any) => Promise<void>) {
     const telegramId = query.from.id.toString();
-    const data = query.data;
     const defaultLanguage = 'uz';
+    const chatId = query.message?.chat.id;
 
-    if (!chatId || !data) {
-      await this.telegramService.sendMessageWithMenu(
-        chatId,
-        this.i18nService.getTranslation('errors.invalid_input', defaultLanguage),
-        defaultLanguage,
-        telegramId,
-      );
+    if (!query.message || !chatId) {
+      await bot.answerCallbackQuery(query.id, { text: this.i18nService.getTranslation('errors.invalid_input', defaultLanguage) });
+      return;
+    }
+
+    const data = query.data;
+    if (!data) {
+      await sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.invalid_input', defaultLanguage), defaultLanguage, telegramId);
       await bot.answerCallbackQuery(query.id);
       return;
     }
@@ -54,12 +52,7 @@ export class CallbackHandler {
     if (data.startsWith('lang_')) {
       const language = data.split('_')[1] as 'uz' | 'ru' | 'en';
       if (!['uz', 'ru', 'en'].includes(language)) {
-        await this.telegramService.sendMessageWithMenu(
-          chatId,
-          this.i18nService.getTranslation('errors.invalid_input', defaultLanguage),
-          defaultLanguage,
-          telegramId,
-        );
+        await sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.invalid_input', defaultLanguage), defaultLanguage, telegramId);
         await bot.answerCallbackQuery(query.id);
         return;
       }
@@ -76,6 +69,7 @@ export class CallbackHandler {
       }
 
       const message = this.i18nService.getTranslation('success.language_updated', language);
+      const isAdmin = await this.authService.isAdmin(telegramId);
       if (!user.phoneNumber) {
         await this.telegramService.sendMessage(chatId, this.i18nService.getTranslation('register.phone_request', language), {
           reply_markup: {
@@ -85,7 +79,7 @@ export class CallbackHandler {
           },
         });
       } else {
-        await this.telegramService.sendMessageWithMenu(chatId, message, language, telegramId);
+        await sendMessageWithMenu(chatId, message, language, telegramId);
       }
     } else if (data.startsWith('course_info_')) {
       await this.courseInfoHandler.handle(query, bot);
@@ -104,19 +98,32 @@ export class CallbackHandler {
     } else if (
       data === 'general_quizzes' ||
       data.startsWith('start_general_quiz_') ||
-      data.startsWith('submit_general_') ||
+      data.startsWith('submit_general_quiz_') ||
       data.startsWith('next_general_question_')
     ) {
       await this.generalQuizHandler.handleCallback(query, bot);
-    } else if (data === 'list_courses' || data.startsWith('list_lessons_')) {
-      await this.listCoursesHandler.handleCallback(query, bot);
+    } else if (
+      data === 'mixed_quizzes' ||
+      data.startsWith('mixed_quiz_') ||
+      data.startsWith('view_mixed_quiz_') ||
+      data.startsWith('delete_mixed_quiz_')
+    ) {
+      await this.mixedQuizHandler.handleCallbackQuery(query, bot);
+    } else if (
+      data === 'create_mixed_quiz' ||
+      data === 'add_question' ||
+      data === 'finish_quiz'
+    ) {
+      await this.mixedQuizHandler.handleQuizCreationCallback(query, bot);
     } else if (
       data.startsWith('create_lesson_course_') ||
       data.startsWith('view_lessons_course_') ||
       data.startsWith('delete_lesson_course_') ||
       data.startsWith('delete_lesson_') ||
       data.startsWith('create_quiz_course_') ||
+      data.startsWith('create_quiz_lesson_') ||
       data.startsWith('view_quizzes_course_') ||
+      data.startsWith('view_quizzes_lesson_') ||
       data.startsWith('delete_quiz_course_') ||
       data.startsWith('delete_quiz_') ||
       data.startsWith('delete_course_') ||
@@ -124,13 +131,10 @@ export class CallbackHandler {
       data === 'admin_view_lessons'
     ) {
       await this.adminHandler.handleCallback(query, bot);
+    } else if (data === 'list_courses') {
+      await this.listCoursesHandler.handleCallback(query, bot);
     } else {
-      await this.telegramService.sendMessageWithMenu(
-        chatId,
-        this.i18nService.getTranslation('errors.invalid_input', defaultLanguage),
-        defaultLanguage,
-        telegramId,
-      );
+      await sendMessageWithMenu(chatId, this.i18nService.getTranslation('errors.invalid_input', defaultLanguage), defaultLanguage, telegramId);
     }
 
     await bot.answerCallbackQuery(query.id);

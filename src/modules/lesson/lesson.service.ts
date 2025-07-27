@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Lesson } from './lesson.entity';
 import { CourseService } from '../course/course.service';
 import { ProgressService } from '../progress/progress.service';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class LessonService {
@@ -12,7 +13,15 @@ export class LessonService {
     private readonly lessonRepository: Repository<Lesson>,
     private readonly courseService: CourseService,
     private readonly progressService: ProgressService,
+    private readonly userService: UserService,
   ) {}
+
+  async findAll(): Promise<Lesson[]> {
+    return this.lessonRepository.find({
+      relations: ['course'],
+      order: { order: 'ASC' },
+    });
+  }
 
   async findByCourseId(courseId: number): Promise<Lesson[]> {
     return this.lessonRepository.find({
@@ -22,7 +31,10 @@ export class LessonService {
   }
 
   async findById(id: number): Promise<Lesson | null> {
-    return this.lessonRepository.findOne({ where: { id }, relations: ['course'] });
+    return this.lessonRepository.findOne({
+      where: { id },
+      relations: ['course'],
+    });
   }
 
   async canAccessLesson(telegramId: string, lessonId: number): Promise<boolean> {
@@ -90,5 +102,25 @@ export class LessonService {
     const lesson = await this.findById(id);
     if (!lesson) throw new NotFoundException('Lesson not found');
     await this.lessonRepository.delete(id);
+  }
+
+  async unlockLesson(telegramId: string, lessonId: number): Promise<void> {
+    const lesson = await this.findById(lessonId);
+    if (!lesson) throw new NotFoundException('Lesson not found');
+    await this.progressService.updateProgress(telegramId, lessonId);
+  }
+
+  async findNextLesson(currentLessonId: number, courseId: number): Promise<Lesson | null> {
+    const lessons = await this.lessonRepository.find({
+      where: { course: { id: courseId } },
+      order: { order: 'ASC' },
+    });
+
+    const currentIndex = lessons.findIndex(lesson => lesson.id === currentLessonId);
+    if (currentIndex === -1 || currentIndex + 1 >= lessons.length) {
+      return null;
+    }
+
+    return lessons[currentIndex + 1];
   }
 }

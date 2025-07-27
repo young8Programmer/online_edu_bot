@@ -15,10 +15,12 @@ import { I18nModule } from '../i18n/i18n.module';
 import { QuizResult } from './quiz-result.entity';
 import { TelegramModule } from '../telegram/telegram.module';
 import { GeneralQuizHandler } from './handlers/general-quiz.handler';
+import { Question } from './question.entity';
+import { MixedQuizHandler } from './handlers/mixed-quiz.handler';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Quiz, QuizResult]),
+    TypeOrmModule.forFeature([Quiz, QuizResult, Question]),
     forwardRef(() => CourseModule),
     forwardRef(() => LessonModule),
     forwardRef(() => UserModule),
@@ -28,7 +30,7 @@ import { GeneralQuizHandler } from './handlers/general-quiz.handler';
     I18nModule,
   ],
   controllers: [QuizController],
-  providers: [QuizService, StartQuizHandler, SubmitQuizHandler, ViewResultsHandler, GeneralQuizHandler],
+  providers: [QuizService, StartQuizHandler, SubmitQuizHandler, ViewResultsHandler, GeneralQuizHandler, MixedQuizHandler],
   exports: [QuizService],
 })
 export class QuizModule {}

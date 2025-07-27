@@ -1,4 +1,4 @@
-import { Injectable, forwardRef, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Certificate } from './certificate.entity';
@@ -19,8 +19,6 @@ export class CertificateService {
     private readonly userService: UserService,
     private readonly courseService: CourseService,
     private readonly progressService: ProgressService,
-    @Inject(forwardRef(() => QuizService))
-    private readonly quizService: QuizService,
     private readonly i18nService: I18nService,
   ) {}
 
@@ -42,7 +40,6 @@ export class CertificateService {
     if (!user || !course) throw new NotFoundException();
 
     const progress = await this.progressService.getProgress(telegramId, courseId);
-    const quizzes = await this.quizService.findByCourseId(courseId);
     if (progress.completed !== progress.total) throw new NotFoundException();
 
     const qrCode = await QRCode.toDataURL(`https://example.com/verify/${telegramId}/${courseId}`);
@@ -84,6 +81,4 @@ export class CertificateService {
 
     return this.certificateRepository.save(certificate);
   }
-
-  
 }

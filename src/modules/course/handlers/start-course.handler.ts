@@ -71,8 +71,7 @@ export class StartCourseHandler {
     const keyboard = {
       reply_markup: {
         inline_keyboard: [
-          [{ text: this.i18nService.getTranslation('quizzes.list', language), callback_data: `list_quizzes_${courseId}_${firstLesson.id}` }],
-          [{ text: this.i18nService.getTranslation('lessons.list', language), callback_data: `list_lessons_${courseId}` }],
+          [{ text: this.i18nService.getTranslation('quizzes.start', language), callback_data: `start_quiz_lesson_${firstLesson.id}` }],
           [{ text: this.i18nService.getTranslation('courses.back', language), callback_data: 'list_courses' }],
         ],
       },

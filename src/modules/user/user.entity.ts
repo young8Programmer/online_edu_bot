@@ -22,9 +22,9 @@ telegramId: string;
 
   @Column({ nullable: true })
   email: string;
-
-  @Column({ default: 'awaiting_phone' })
-  state: string;
+  
+  @Column({ nullable: true, default: 'awaiting_phone' })
+  state?: 'awaiting_phone' | 'awaiting_email' | 'registered';
 
   @CreateDateColumn()
   registeredAt: Date;

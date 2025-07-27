@@ -12,9 +12,11 @@
         "user_panel": "📋 Foydalanuvchi paneliga o‘tish",
         "my_courses": "📚 Mening kurslarim",
         "quizzes": "🧪 Testlar",
-        "payment_history": "📂 To‘lovlar tarixi"
+        "payment_history": "📂 To‘lovlar tarixi",
+        "back": "🔙 Orqaga"
     },
     "admin": {
+        "select_lesson_for_quizzes": "Testlarni ko‘rish uchun darsni tanlang",
         "panel": "🛠 Admin paneli",
         "user_stats": "📊 Foydalanuvchi statistikasi",
         "user_payments": "💸 Foydalanuvchilar to‘lovlari",
@@ -52,29 +54,47 @@
         "select_course_to_delete_quiz": "Testni o‘chirish uchun kursni tanlang:",
         "select_lesson_to_delete": "O‘chiriladigan darsni tanlang:",
         "select_quiz_to_delete": "O‘chiriladigan testni tanlang:",
-        "enter_broadcast_message": "Ommaviy xabar matnini kiriting:"
+        "create_mixed_quiz": "🧪 Aralash test yaratish",
+        "view_mixed_quizzes": "🧪 Aralash testlarni ko‘rish",
+        "delete_mixed_quiz": "🧪 Aralash testni o‘chirish",
+        "create_mixed_quiz_prompt": "Test ma'lumotlarini kiriting (har bir test uchun quyidagi formatda):\nSavol uz: [savol matni]\nSavol ru: [savol matni]\nSavol en: [savol matni]\nVariantlar uz: [variant1, variant2, variant3, variant4]\nVariantlar ru: [variant1, variant2, variant3, variant4]\nVariantlar en: [variant1, variant2, variant3, variant4]\nTo‘g‘ri javob: [1-4]\n---\nYangi test uchun yuqoridagi formatni takrorlang.",
+        "enter_broadcast_message": "Ommaviy xabar matnini kiriting:",
+        "mixed_quizzes": "Aralash testlar",
+        "no_mixed_quizzes": "Aralash testlar topilmadi.",
+        "select_mixed_quiz": "Aralash testni tanlang:",
+        "view": "Ko‘rish",
+        "delete": "O‘chirish",
+        "options": "Variantlar",
+        "correct": "To‘g‘ri javob",
+        "enter_question": "Savolni kiriting:",
+        "enter_option": "Javob variantini kiriting:",
+        "enter_correct_option": "To‘g‘ri javob raqamini kiriting (1-4):",
+        "add_more_questions": "Yana savol qo‘shasizmi?",
+        "add_question": "Savol qo‘shish",
+        "finish": "Tugatish"
     },
     "success": {
         "registered": "✅ Ro‘yxatdan o‘tish muvaffaqiyatli yakunlandi!",
         "language_updated": "✅ Til muvaffaqiyatli o‘zgartirildi!",
-        "course_created": "✅ Kurs muvaffaqiyatli yaratildi: *{title}*",
-        "lesson_created": "✅ Dars muvaffaqiyatli yaratildi: *{title}*",
-        "quiz_created": "✅ Test muvaffaqiyatli yaratildi: *{question}*",
-        "course_deleted": "✅ Kurs muvaffaqiyatli o‘chirildi: *{title}*",
-        "lesson_deleted": "✅ Dars muvaffaqiyatli o‘chirildi: *{title}*",
-        "quiz_deleted": "✅ Test muvaffaqiyatli o‘chirildi: *{question}*",
+        "course_created": "✅ Kurs muvaffaqiyatli yaratildi: {title}",
+        "lesson_created": "✅ Dars muvaffaqiyatli yaratildi: {title}",
+        "quiz_created": "✅ Test muvaffaqiyatli yaratildi: {question}",
+        "course_deleted": "✅ Kurs muvaffaqiyatli o‘chirildi: {title}",
+        "lesson_deleted": "✅ Dars muvaffaqiyatli o‘chirildi: {title}",
+        "quiz_deleted": "✅ Test muvaffaqiyatli o‘chirildi: {question}",
         "courses_created": "✅ {count} ta kurs muvaffaqiyatli yaratildi: {titles}",
         "lessons_created": "✅ {count} ta dars muvaffaqiyatli yaratildi: {titles}",
         "quizzes_created": "✅ {count} ta test muvaffaqiyatli yaratildi: {questions}",
         "broadcast_sent": "✅ Ommaviy xabar muvaffaqiyatli yuborildi!",
         "correct_answer": "✅ To‘g‘ri javob!",
         "notification_sent": "✅ Bildirishnoma muvaffaqiyatli yuborildi!",
-        "lesson_completed": "🎉 *{title}* darsi muvaffaqiyatli yakunlandi!",
-        "course_started": "🎉 *{title}* kursini boshladingiz! Birinchi darsga o‘tishingiz mumkin.",
+        "lesson_completed": "🎉 {title} darsi muvaffaqiyatli yakunlandi!",
+        "course_started": "🎉 {title} kursini boshladingiz! Birinchi darsga o‘tishingiz mumkin.",
         "admin_login": "✅ Admin sifatida muvaffaqiyatli kirdingiz!",
         "logout": "🚪 Siz admin panelidan chiqdingiz."
     },
     "errors": {
+        "no_quizzes_found": "🧪 Hech qanday test topilmadi.",
         "access_denied": "🚫 Sizda bu amalni bajarish huquqi yo‘q!",
         "user_not_found": "🚫 Foydalanuvchi topilmadi!",
         "invalid_email": "🚫 Noto‘g‘ri email formati! Iltimos, to‘g‘ri email kiriting.",
@@ -83,7 +103,7 @@
         "quiz_not_found": "🚫 Test topilmadi!",
         "course_not_completed": "🚫 Kurs to‘liq yakunlanmagan!",
         "invalid_input": "🚫 Noto‘g‘ri kiritish! Iltimos, ma'lumotlarni to‘g‘ri formatda kiriting.",
-        "incorrect_answer": "❌ Noto‘g‘ri javob. To‘g‘ri javob: *{correctAnswer}*",
+        "incorrect_answer": "❌ Noto‘g‘ri javob. To‘g‘ri javob: {correctAnswer}",
         "course_access_denied": "🚫 Sizda bu kursga kirish huquqi yo‘q. Iltimos, sotib oling.",
         "already_logged_in": "🚫 Siz allaqachon admin sifatida tizimga kirgansiz!",
         "invalid_password": "❌ Noto‘g‘ri parol. Qayta urinib ko‘ring.",
@@ -99,33 +119,35 @@
         "lesson_fetch_error": "🚫 Darslarni olishda xato yuz berdi!",
         "quiz_fetch_error": "🚫 Testlarni olishda xato yuz berdi!",
         "user_fetch_error": "🚫 Foydalanuvchilar ma'lumotlarini olishda xato yuz berdi!",
-        "payment_fetch_error": "🚫 To‘lovlar ma'lumotlarini olishda xato yuz berdi!"
+        "payment_fetch_error": "🚫 To‘lovlar ma'lumotlarini olishda xato yuz berdi!",
+        "invalid_quiz_state": "Test yaratish jarayonida xatolik yuz berdi.",
+        "invalid_correct_option": "Noto‘g‘ri javob raqami kiritildi. 1-4 oralig‘ida raqam kiriting."
     },
     "register": {
         "phone_request": "📱 Iltimos, ro‘yxatdan o‘tish uchun telefon raqamingizni yuboring:",
         "share_phone": "📱 Telefon raqamni ulashish",
         "email_request": "📧 Iltimos, email manzilingizni kiriting:",
-        "choose_language": "🌐 Iltimos, tilni tanlang:"
+        "language_request": "🌐 Iltimos, tilni tanlang:"
     },
     "profile": {
-        "info": "👤 *Profil ma’lumotlari:*\n*Ism:* {fullName}\n*Telefon:* {phoneNumber}\n*Email:* {email}\n*Til:* {language}",
+        "info": "👤 Profil ma’lumotlari:\n Ism: {fullName}\n Telefon: {phoneNumber}\n Email: {email}\n Til: {language}",
         "not_set": "O‘rnatilmagan",
         "edit": "✏️ Tahrirlash"
     },
     "help": {
-        "message": "📚 *Botdan foydalanish bo‘yicha yordam:*\n\n- /start - Botni ishga tushirish\n- /profile - Profil ma‘lumotlarini ko‘rish\n- /language - Tilni o‘zgartirish\n- /admin - Admin paneli (adminlar uchun)\n\nℹ️ Qo‘shimcha savollar uchun admin bilan bog‘laning!",
+        "message": "📚 Botdan foydalanish bo‘yicha yordam: \n\n- /start - Botni ishga tushirish\n- /profile - Profil ma‘lumotlarini ko‘rish\n- /language - Tilni o‘zgartirish\n- /admin - Admin paneli (adminlar uchun)\n\nℹ️ Qo‘shimcha savollar uchun admin bilan bog‘laning!",
         "info": "📖 Botdan foydalanish bo‘yicha qo‘llanma:\n1. Kurslarni tanlash uchun 'Kurslar' ni bosing.\n2. Pulli kurslarni sotib olish uchun 'To‘lovlar tarixi' ni tekshiring.\n3. Testlardan o‘tish uchun 60%+ natija oling.\n4. Sertifikatlar 'Sertifikatlarim' bo‘limida saqlanadi."
     },
     "stats": {
-        "header": "📊 *Foydalanuvchi statistikasi*",
-        "total_users": "👥 *Jami foydalanuvchilar:* {totalUsers}",
-        "users_list": "📋 *Foydalanuvchilar ro‘yxati:*",
-        "user_info": "- *ID:* {id}\n  *Ism:* {name}\n  *Telefon:* {phone}\n  *Email:* {email}"
+        "header": "📊 Foydalanuvchi statistikasi",
+        "total_users": "👥 Jami foydalanuvchilar: {totalUsers}",
+        "users_list": "📋 Foydalanuvchilar ro‘yxati:",
+        "user_info": "1 ID: {id}\n    2 Ism: {name}\n    3 Telefon: {phone}\n    4 Email: {email}"
     },
     "courses": {
         "no_courses": "🎓 Hozirda kurslar mavjud emas.",
-        "list": "🎓 *Mavjud kurslar:*",
-        "info": "📚 *Kurs:* {title}\n📝 *Ta’rif:* {description}\n💰 *Narx:* {price}\n{access}",
+        "list": "🎓 Mavjud kurslar:",
+        "info": "📚 Kurs: {title}\n📝 Ta’rif: {description}\n💰 Narx: {price}\n{access}",
         "start": "🚀 Kursni boshlash",
         "access_granted": "✅ Sizda bu kursga kirish huquqi bor",
         "access_denied": "🔒 Kursni sotib oling",
@@ -135,10 +157,11 @@
         "my_courses": "Mening kurslarim",
         "back": "🔙 Orqaga"
     },
+
     "lessons": {
         "no_lessons": "📖 Hozirda darslar mavjud emas.",
-        "list": "📖 *Mavjud darslar:*",
-        "info": "📚 *Dars:* {title}\n📝 *Turi:* {contentType}\n🔗 *Havola:* {contentUrl}",
+        "list": "📖 Mavjud darslar:",
+        "info": "📚 Dars: {title}\n📝 Turi: {contentType}\n🔗 Havola: {contentUrl}",
         "complete": "✅ Darsni yakunlash",
         "type": "Turi",
         "url": "Havola",
@@ -149,7 +172,7 @@
         "select_course": "🎓 Kurs tanlang:",
         "no_quizzes": "📝 Hozirda testlar mavjud emas.",
         "no_quizzes_for_course": "📝 Bu kurs uchun testlar mavjud emas.",
-        "list": "📝 *Mavjud testlar:*",
+        "list": "📝 Mavjud testlar:",
         "results_list": "📊 Test natijalarini ko‘rish uchun kursni tanlang",
         "results": "📊 Natijalar:",
         "no_results": "📝 Sizda bu kurs bo‘yicha test natijalari yo‘q.",
@@ -162,7 +185,10 @@
         "options": "Variantlar",
         "correct": "To‘g‘ri javob",
         "result": "Natija: {score}/{total} ({percentage}%)",
-        "retry": "🔄 Qayta topshirish"
+        "retry": "🔄 Qayta topshirish",
+        "mixed_quizzes": "🧪 Aralash testlar",
+        "no_mixed_quizzes": "🧪 Aralash testlar topilmadi.",
+        "no_quizzes_for_lesson": "Ushbu dars uchun testlar topilmadi."
     },
     "certificates": {
         "no_certificates": "🎖️ Sizda hali sertifikatlar yo‘q.",
@@ -173,16 +199,16 @@
         "issued": "Berilgan sana: {date}",
         "certificate_caption": "{title} kursi uchun sertifikat",
         "error": "Sertifikatni generatsiya qilishda xatolik yuz berdi",
-        "info": "{index}. *Kurs*: {course}\n*Sana*: {date}"
+        "info": "{index}. Kurs: {course}\nSana: {date}"
     },
     "payment": {
         "no_payments": "💸 Sizda hali to‘lovlar yo‘q.",
         "history": "💸 To‘lovlar tarixi",
         "history_item": "{index}. Kurs: {course}\nSumma: {amount} UZS\nHolat: {status}\nSana: {date}",
         "free_course": "💳 Bu kurs bepul!",
-        "initiate": "💳 *{course}* kursi uchun to‘lov:\nSumma: {amount} UZS\nTo‘lov havolasi: {paymentUrl}",
+        "initiate": "💳 {course} kursi uchun to‘lov:\nSumma: {amount} UZS\nTo‘lov havolasi: {paymentUrl}",
         "verify": "✅ To‘lovni tasdiqlash",
-        "verified": "✅ To‘lov muvaffaqiyatli tasdiqlandi! *{course}* kursiga kirish huquqi ochildi.",
+        "verified": "✅ To‘lov muvaffaqiyatli tasdiqlandi! {course} kursiga kirish huquqi ochildi.",
         "buy": "💳 Sotib olish",
         "choose_method": "To‘lov usulini tanlang:",
         "initiated": "To‘lov yaratildi. Quyidagi havola orqali to‘lang: {link}",
@@ -202,7 +228,7 @@
         "email_request": "📧 Iltimos, email manzilingizni kiriting:"
     },
     "progress": {
-        "info": "*Kurs*: {title}\n*Yakunlangan*: {completed}/{total} ({percentage}%)",
+        "info": "Kurs: {title}\nYakunlangan: {completed}/{total} ({percentage}%)",
         "no_progress": "📊 Hech qanday progress yo‘q!"
     },
     "language": {
